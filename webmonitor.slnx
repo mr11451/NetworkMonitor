@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="NetworkMonitorApp/NetworkMonitorApp.vcxproj" Id="7c15a61b-8cba-45e1-9f29-2e3afa652440" />
+</Solution>
