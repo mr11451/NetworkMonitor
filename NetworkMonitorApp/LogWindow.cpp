@@ -13,10 +13,10 @@ namespace
 }
 
 // グローバルヘルパー関数
-std::wstring LogWindow::LoadStringFromResource(UINT stringID)
+std::wstring LogWindow::LoadStringFromResource(int stringId) const
 {
     WCHAR buffer[512];
-    if (LoadStringW(GetModuleHandle(nullptr), stringID, buffer, 512) > 0)
+    if (LoadStringW(GetModuleHandle(nullptr), stringId, buffer, 512) > 0)
     {
         return buffer;
     }
@@ -24,7 +24,7 @@ std::wstring LogWindow::LoadStringFromResource(UINT stringID)
 }
 
 // レジストリキーの取得
-const wchar_t* LogWindow::GetRegistryKey()
+std::wstring LogWindow::GetRegistryKey() const
 {
     return LOG_WINDOW_REGISTRY_KEY;
 }
@@ -32,10 +32,12 @@ const wchar_t* LogWindow::GetRegistryKey()
 // コンストラクタ・デストラクタ
 LogWindow::LogWindow()
     : m_hWnd(nullptr)
+    , m_hParent(nullptr)
     , m_hListBox(nullptr)
     , m_hClearButton(nullptr)
     , m_hLogPathLabel(nullptr)
     , m_hOpenFolderButton(nullptr)
+    , m_isVisible(false)
 {
 }
 
@@ -46,11 +48,4 @@ LogWindow::~LogWindow()
         WindowPositionManager::SavePosition(m_hWnd, LOG_WINDOW_REGISTRY_KEY);
         DestroyWindow(m_hWnd);
     }
-}
-
-// シングルトンインスタンス
-LogWindow& LogWindow::GetInstance()
-{
-    static LogWindow instance;
-    return instance;
 }

@@ -14,7 +14,7 @@ public:
     bool Initialize(HWND hMainDlg);
     void Cleanup();
     
-    bool StartCapture(HWND hDlg, USHORT port);
+    bool StartCapture(HWND hDlg, USHORT port, const std::wstring& targetIP = L"");
     void StopCapture(HWND hDlg);
     
     bool StartBinaryLogging(HWND hDlg, const std::wstring& directoryPath);
@@ -39,6 +39,9 @@ public:
     void OnSelectLogFolder(HWND hDlg);
     void OpenSaveLocation(HWND hDlg);
     
+    // 対象IPアドレスの取得
+    std::wstring GetTargetIPAddress() const { return m_targetIPAddress; }
+    
 private:
     AppController() = default;
     ~AppController() = default;
@@ -56,6 +59,7 @@ private:
     std::atomic<UINT64> m_packetCount{0};
     std::wstring m_logDirectory;
     std::wstring m_logFolderPath;
+    std::wstring m_targetIPAddress; // 監視対象IPアドレス
     
     // テキストログ用メンバー変数（ファイルストリームは削除）
     std::wstring m_textLogFilePath;

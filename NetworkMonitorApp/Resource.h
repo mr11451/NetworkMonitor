@@ -20,8 +20,7 @@
 // コントロールID
 #define IDC_STATIC_PORT_LABEL           1006
 #define IDC_EDIT_PORT_NUMBER            1000
-#define IDC_BTN_START_CUSTOM            1005
-#define IDC_BTN_STOP_CAPTURE            1003
+#define IDC_BTN_TOGGLE_CAPTURE          1005
 #define IDC_BTN_SHOW_LOG                1004
 #define IDC_STATIC_STATUS               1007
 #define IDC_BTN_SELECT_LOG_FOLDER       1008
@@ -30,6 +29,10 @@
 #define IDC_LOG_BTN_OPEN_FOLDER         1011
 #define IDC_LOG_STATIC_PATH             1012
 #define IDC_LOG_LISTBOX                 1013
+#define IDC_BTN_START_CUSTOM            1001
+#define IDC_BTN_TOGGLE_MONITOR          1001
+#define IDC_STATIC_IP_LABEL             1014
+#define IDC_EDIT_TARGET_IP              1015
 
 // 文字列ID
 #define IDS_ERROR_PORT_RANGE            200
@@ -78,6 +81,23 @@
 #define IDS_SOCKET_ERROR                238
 #define IDS_CAPTURE_THREAD_ENDED        239
 
+// トグルボタン用文字列ID
+#define IDS_BTN_START_CAPTURE           240
+#define IDS_BTN_STOP_CAPTURE            241
+
+// IPアドレス検証用文字列ID
+#define IDS_ERROR_INVALID_IP            242
+#define IDS_IP_LABEL                    243
+
+// AppController用文字列ID
+#define IDS_CAPTURE_ALL_IP_IPV4_IPV6    244
+#define IDS_CAPTURE_TARGET_IP           245
+#define IDS_LOG_FOLDER_CHANGE_TITLE     246
+#define IDS_LOG_FOLDER_CHANGE_MSG       247
+#define IDS_ERROR_LOG_FOLDER_NOT_FOUND  248
+#define IDS_ERROR_DIR_CREATE_FAILED     249
+#define IDS_LOG_FOLDER_SELECT_TITLE     250
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
@@ -85,7 +105,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32772
-#define _APS_NEXT_CONTROL_VALUE         1014
+#define _APS_NEXT_CONTROL_VALUE         1016
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

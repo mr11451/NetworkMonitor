@@ -1,6 +1,6 @@
 #include "framework.h"
 #include "LogWindow.h"
-#include "resource.h"
+#include "Resource.h"
 
 void LogWindow::AddLog(const std::wstring& message)
 {
@@ -20,6 +20,7 @@ void LogWindow::AddLogInternal(const std::wstring& message)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
+    // 最大ログ行数チェック
     if (m_logs.size() >= MAX_LOG_LINES)
     {
         m_logs.erase(m_logs.begin());
@@ -29,20 +30,29 @@ void LogWindow::AddLogInternal(const std::wstring& message)
         }
     }
 
+    // タイムスタンプ付きログエントリ作成
+    std::wstring logEntry = CreateLogEntry(message);
+    m_logs.push_back(logEntry);
+
+    // リストボックスに追加
+    if (m_hListBox && IsWindow(m_hListBox))
+    {
+        int index = static_cast<int>(SendMessage(m_hListBox, LB_ADDSTRING, 0, 
+                                                  reinterpret_cast<LPARAM>(logEntry.c_str())));
+        SendMessage(m_hListBox, LB_SETTOPINDEX, index, 0);
+    }
+}
+
+std::wstring LogWindow::CreateLogEntry(const std::wstring& message) const
+{
     SYSTEMTIME st;
     GetLocalTime(&st);
+    
     wchar_t timeStr[64];
     swprintf_s(timeStr, L"[%02d:%02d:%02d.%03d] ", 
                st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
     
-    std::wstring logEntry = timeStr + message;
-    m_logs.push_back(logEntry);
-
-    if (m_hListBox && IsWindow(m_hListBox))
-    {
-        int index = static_cast<int>(SendMessage(m_hListBox, LB_ADDSTRING, 0, (LPARAM)logEntry.c_str()));
-        SendMessage(m_hListBox, LB_SETTOPINDEX, index, 0);
-    }
+    return std::wstring(timeStr) + message;
 }
 
 void LogWindow::Clear()

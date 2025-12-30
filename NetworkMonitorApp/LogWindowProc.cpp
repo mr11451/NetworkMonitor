@@ -23,12 +23,12 @@ INT_PTR CALLBACK LogWindow::DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
     {
         switch (message)
         {
-        case WM_ADD_LOG:
+        case WM_ADD_LOG:  // ç°ÇÕ#defineÇ»ÇÃÇ≈switchï∂Ç≈égópâ¬î\
         {
             std::wstring* pMessage = reinterpret_cast<std::wstring*>(lParam);
             if (pMessage)
             {
-                pThis->AddLogInternal(*pMessage);
+                pThis->AddLog(*pMessage);
                 delete pMessage;
             }
             return (INT_PTR)TRUE;

@@ -10,8 +10,8 @@
 #include <Shlwapi.h>
 #include <sstream>
 #include <mutex>
-#include <iomanip>  // 追加: std::setw, std::setfill のために必要
-#include <shellapi.h> // 追加: ShellExecuteWのために必要
+#include <iomanip>
+#include <shellapi.h>
 #pragma comment(lib, "Shlwapi.lib")
 
 AppController& AppController::GetInstance()
@@ -56,7 +56,7 @@ bool AppController::Initialize(HWND hMainDlg)
 void AppController::Cleanup()
 {
     StopBinaryLogging();
-    StopTextLogging(); // 追加
+    StopTextLogging();
     
     if (m_pPacketCapture && m_pPacketCapture->IsCapturing())
     {
@@ -68,7 +68,7 @@ void AppController::Cleanup()
     m_packetCount = 0;
 }
 
-bool AppController::StartCapture(HWND hDlg, USHORT port)
+bool AppController::StartCapture(HWND hDlg, USHORT port, const std::wstring& targetIP)
 {
     if (port == 0)
     {
@@ -88,27 +88,78 @@ bool AppController::StartCapture(HWND hDlg, USHORT port)
     }
 
     m_packetCount = 0;
+    m_targetIPAddress = targetIP;
     
-    // バイナリログとテキストログを自動開始
+    // IPアドレスを保存
+    ConfigManager::GetInstance().SaveLastIPAddress(targetIP);
+    
+    // バイナリログとテキストログを両方開始
     if (!IsBinaryLogging())
     {
         StartBinaryLogging(hDlg, GetDefaultBinaryLogPath());
     }
     
-    if (!IsTextLogging()) // 追加
+    if (!IsTextLogging())
     {
         StartTextLogging(hDlg, GetDefaultTextLogPath());
     }
     
-    if (m_pPacketCapture->StartCapture(port))
+    // IPアドレスの種別を判定
+    IPAddressType ipType = UIHelper::GetIPAddressType(targetIP);
+    
+    bool captureSuccess = false;
+    
+    switch (ipType)
+    {
+    case IPAddressType::None:
+        // 空または全IP対象 → IPv4とIPv6両方を起動
+        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, PacketCapture::CaptureMode::Both);
+        break;
+        
+    case IPAddressType::IPv4:
+        // IPv4アドレス → IPv4のみ起動
+        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, PacketCapture::CaptureMode::IPv4Only);
+        break;
+        
+    case IPAddressType::IPv6:
+        // IPv6アドレス → IPv6のみ起動
+        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, PacketCapture::CaptureMode::IPv6Only);
+        break;
+    }
+    
+    if (captureSuccess)
     {
         // ポート番号を保存
         ConfigManager::GetInstance().SaveLastPort(port);
         
         WCHAR msg[AppConstants::MAX_STRING_LENGTH];
-        swprintf_s(msg, AppConstants::MAX_STRING_LENGTH, 
-            UIHelper::LoadStringFromResource(IDS_INFO_CAPTURE_STARTED).c_str(), 
-            port);
+        if (targetIP.empty())
+        {
+            // IDS_CAPTURE_ALL_IP_IPV4_IPV6 を使用
+            std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_CAPTURE_ALL_IP_IPV4_IPV6);
+            swprintf_s(msg, AppConstants::MAX_STRING_LENGTH, msgTemplate.c_str(), port);
+        }
+        else
+        {
+            const wchar_t* ipTypeStr = L"";
+            switch (ipType)
+            {
+            case IPAddressType::IPv4:
+                ipTypeStr = L"IPv4";
+                break;
+            case IPAddressType::IPv6:
+                ipTypeStr = L"IPv6";
+                break;
+            default:
+                ipTypeStr = L"不明";
+                break;
+            }
+            
+            // IDS_CAPTURE_TARGET_IP を使用
+            std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_CAPTURE_TARGET_IP);
+            swprintf_s(msg, AppConstants::MAX_STRING_LENGTH, msgTemplate.c_str(), 
+                      port, targetIP.c_str(), ipTypeStr);
+        }
         UIHelper::ShowInfoMessage(hDlg, msg, IDS_INFO_TITLE);
         InvalidateRect(hDlg, nullptr, TRUE);
         return true;
@@ -116,7 +167,7 @@ bool AppController::StartCapture(HWND hDlg, USHORT port)
     else
     {
         StopBinaryLogging();
-        StopTextLogging(); // 追加
+        StopTextLogging();
         UIHelper::ShowErrorMessage(hDlg, IDS_ERROR_CAPTURE_FAILED, IDS_ERROR_TITLE);
         return false;
     }
@@ -128,7 +179,7 @@ void AppController::StopCapture(HWND hDlg)
     {
         m_pPacketCapture->StopCapture();
         StopBinaryLogging();
-        StopTextLogging(); // 追加
+        StopTextLogging();
         
         UIHelper::ShowInfoMessage(hDlg,
             UIHelper::LoadStringFromResource(IDS_INFO_CAPTURE_STOPPED),
@@ -152,20 +203,18 @@ bool AppController::IsBinaryLogging() const
     return BinaryLogger::GetInstance().IsLogging();
 }
 
-// テキストログ用メソッドの実装
 bool AppController::StartTextLogging(HWND hDlg, const std::wstring& filePath)
 {
     std::lock_guard<std::mutex> lock(m_textLogMutex);
     
     if (m_isTextLogging)
     {
-        return false; // 既にログ中
+        return false;
     }
     
     m_textLogFilePath = filePath;
     m_isTextLogging = true;
     
-    // ヘッダーを書き込み
     std::wofstream logFile(filePath, std::ios::out | std::ios::trunc);
     if (!logFile.is_open())
     {
@@ -185,7 +234,7 @@ bool AppController::StartTextLogging(HWND hDlg, const std::wstring& filePath)
             << std::setw(2) << st.wMinute << L":"
             << std::setw(2) << st.wSecond << std::endl;
     logFile << L"============================" << std::endl << std::endl;
-    logFile.close(); // ファイルを閉じる
+    logFile.close();
     
     return true;
 }
@@ -196,7 +245,6 @@ void AppController::StopTextLogging()
     
     if (m_isTextLogging)
     {
-        // フッターを書き込み
         std::wofstream logFile(m_textLogFilePath, std::ios::out | std::ios::app);
         if (logFile.is_open())
         {
@@ -210,7 +258,7 @@ void AppController::StopTextLogging()
                     << std::setw(2) << st.wHour << L":"
                     << std::setw(2) << st.wMinute << L":"
                     << std::setw(2) << st.wSecond << std::endl;
-            logFile.close(); // ファイルを閉じる
+            logFile.close();
         }
         
         m_isTextLogging = false;
@@ -229,11 +277,9 @@ void AppController::WriteTextLog(const std::wstring& logText)
     
     if (m_isTextLogging && !m_textLogFilePath.empty())
     {
-        // ファイルを開く（追記モード）
         std::wofstream logFile(m_textLogFilePath, std::ios::out | std::ios::app);
         if (logFile.is_open())
         {
-            // タイムスタンプを追加
             SYSTEMTIME st;
             GetLocalTime(&st);
             
@@ -243,7 +289,7 @@ void AppController::WriteTextLog(const std::wstring& logText)
                     << std::setw(2) << st.wSecond << L"."
                     << std::setw(3) << st.wMilliseconds << L"] "
                     << logText << std::endl;
-            logFile.close(); // ファイルを閉じる
+            logFile.close();
         }
     }
 }
@@ -283,17 +329,15 @@ std::wstring AppController::GetDefaultBinaryLogPath() const
 {
     std::wstring logDir = GetLogDirectory();
     
-    // ディレクトリが存在しない場合は作成
     DWORD attrib = GetFileAttributesW(logDir.c_str());
     if (attrib == INVALID_FILE_ATTRIBUTES)
     {
         CreateDirectoryW(logDir.c_str(), nullptr);
     }
     
-    return logDir; // ディレクトリパスを返す
+    return logDir;
 }
 
-// テキストログのデフォルトパスを生成
 std::wstring AppController::GetDefaultTextLogPath() const
 {
     std::wstring logDir = GetLogDirectory();
@@ -303,17 +347,14 @@ std::wstring AppController::GetDefaultTextLogPath() const
         CreateDirectoryW(logDir.c_str(), nullptr);
     }
     
-    // タイムスタンプを取得
     SYSTEMTIME st;
     GetLocalTime(&st);
     
-    // ベースファイル名（日付_時刻）
     WCHAR baseFileName[MAX_PATH];
     swprintf_s(baseFileName, L"Capture_%04d%02d%02d_%02d%02d%02d",
         st.wYear, st.wMonth, st.wDay,
         st.wHour, st.wMinute, st.wSecond);
     
-    // 通し番号を000から付けてユニークなファイル名を探す
     int sequenceNumber = 0;
     std::wstring fullPath;
     
@@ -370,13 +411,11 @@ void AppController::OnPacketCaptured(const PacketInfo& packet)
 {
     IncrementPacketCount();
     
-    // バイナリログに記録
     if (IsBinaryLogging())
     {
         BinaryLogger::GetInstance().LogPacket(packet);
     }
     
-    // ログウィンドウに表示用のテキストを追加（ヘッダー情報）
     std::wstring logText = L"[" + 
         std::wstring(packet.protocol.begin(), packet.protocol.end()) + L"] " +
         std::wstring(packet.sourceIP.begin(), packet.sourceIP.end()) + L":" + 
@@ -385,12 +424,10 @@ void AppController::OnPacketCaptured(const PacketInfo& packet)
         std::to_wstring(packet.destPort) + L" (" + 
         std::to_wstring(packet.dataSize) + L" bytes)";
     
-    // パケットデータを16進数ダンプ形式で追加
     if (!packet.data.empty())
     {
         logText += L"\n  Data: ";
         
-        // 最初の64バイトまたはデータ全体を表示
         size_t displaySize = (std::min)(packet.data.size(), static_cast<size_t>(64));
         
         for (size_t i = 0; i < displaySize; ++i)
@@ -399,28 +436,23 @@ void AppController::OnPacketCaptured(const PacketInfo& packet)
             swprintf_s(hex, L"%02X ", packet.data[i]);
             logText += hex;
             
-            // 16バイトごとに改行
             if ((i + 1) % 16 == 0 && i + 1 < displaySize)
             {
                 logText += L"\n        ";
             }
         }
         
-        // データが64バイトより多い場合は省略を示す
         if (packet.data.size() > displaySize)
         {
             logText += L"... (" + std::to_wstring(packet.data.size() - displaySize) + L" more bytes)";
         }
         
-        // ASCII表示も追加（オプション）
         logText += L"\n  ASCII: ";
         for (size_t i = 0; i < displaySize; ++i)
         {
             BYTE b = packet.data[i];
-            // 印字可能文字のみ表示、それ以外は'.'
             logText += (b >= 32 && b < 127) ? static_cast<wchar_t>(b) : L'.';
             
-            // 16文字ごとにスペース
             if ((i + 1) % 16 == 0 && i + 1 < displaySize)
             {
                 logText += L"\n         ";
@@ -428,7 +460,6 @@ void AppController::OnPacketCaptured(const PacketInfo& packet)
         }
     }
     
-    // テキストログに書き込み
     if (IsTextLogging())
     {
         WriteTextLog(logText);
@@ -456,7 +487,7 @@ std::wstring AppController::GetDefaultLogFolderPath() const
         }
         return appDataPath;
     }
-    return L"";;
+    return L"";
 }
 
 void AppController::LoadLogFolderPath() 
@@ -514,9 +545,12 @@ void AppController::SaveLogFolderPath(const std::wstring& path)
 
 void AppController::OnSelectLogFolder(HWND hDlg) 
 {
+    // IDS_LOG_FOLDER_SELECT_TITLE を使用
+    std::wstring title = UIHelper::LoadStringFromResource(IDS_LOG_FOLDER_SELECT_TITLE);
+    
     BROWSEINFOW bi = { 0 };
     bi.hwndOwner = hDlg;
-    bi.lpszTitle = L"ログの保存先フォルダを選択してください";
+    bi.lpszTitle = title.c_str();
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
     
     LPITEMIDLIST pidl = SHBrowseForFolderW(&bi);
@@ -528,8 +562,13 @@ void AppController::OnSelectLogFolder(HWND hDlg)
             SaveLogFolderPath(selectedPath);
             
             WCHAR message[MAX_PATH + 100];
-            swprintf_s(message, L"ログ保存先を変更しました:\n%s\n\n次回の監視開始から、このフォルダにログが保存されます。", selectedPath);
-            MessageBoxW(hDlg, message, L"通知", MB_OK | MB_ICONINFORMATION);
+            // IDS_LOG_FOLDER_CHANGE_MSG を使用
+            std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_LOG_FOLDER_CHANGE_MSG);
+            swprintf_s(message, msgTemplate.c_str(), selectedPath);
+            
+            // IDS_LOG_FOLDER_CHANGE_TITLE を使用
+            std::wstring msgTitle = UIHelper::LoadStringFromResource(IDS_LOG_FOLDER_CHANGE_TITLE);
+            MessageBoxW(hDlg, message, msgTitle.c_str(), MB_OK | MB_ICONINFORMATION);
         }
         CoTaskMemFree(pidl);
     }
@@ -537,20 +576,16 @@ void AppController::OnSelectLogFolder(HWND hDlg)
 
 void AppController::OpenSaveLocation(HWND hDlg)
 {
-    // BinaryLoggerからディレクトリを取得
     std::wstring logDir = BinaryLogger::GetInstance().GetLogDirectory();
     
     if (logDir.empty())
     {
-        // ログが記録されていない場合は、設定されているログディレクトリを使用
         logDir = GetLogDirectory();
     }
     
-    // パスが存在するか確認
     DWORD attrib = GetFileAttributesW(logDir.c_str());
     if (attrib == INVALID_FILE_ATTRIBUTES)
     {
-        // ディレクトリが存在しない場合は作成を試みる
         if (CreateDirectoryW(logDir.c_str(), NULL) || GetLastError() == ERROR_ALREADY_EXISTS)
         {
             attrib = GetFileAttributesW(logDir.c_str());
@@ -558,13 +593,16 @@ void AppController::OpenSaveLocation(HWND hDlg)
         else
         {
             WCHAR msg[512];
-            swprintf_s(msg, L"ログ保存先が見つかりません:\n%s\n\nディレクトリの作成に失敗しました。", 
-                       logDir.c_str());
-            MessageBoxW(hDlg, msg, L"エラー", MB_OK | MB_ICONERROR);
+            // IDS_ERROR_LOG_FOLDER_NOT_FOUND を使用
+            std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_ERROR_LOG_FOLDER_NOT_FOUND);
+            swprintf_s(msg, msgTemplate.c_str(), logDir.c_str());
+            
+            // IDS_ERROR_DIR_CREATE_FAILED を使用
+            std::wstring msgTitle = UIHelper::LoadStringFromResource(IDS_ERROR_DIR_CREATE_FAILED);
+            MessageBoxW(hDlg, msg, msgTitle.c_str(), MB_OK | MB_ICONERROR);
             return;
         }
     }
     
-    // エクスプローラーでディレクトリを開く
     ShellExecuteW(NULL, L"explore", logDir.c_str(), NULL, NULL, SW_SHOW);
 }

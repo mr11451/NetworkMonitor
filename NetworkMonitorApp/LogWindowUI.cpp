@@ -3,6 +3,7 @@
 #include "resource.h"
 #include "AppController.h"
 #include "WindowPositionManager.h"
+#include <sstream>
 
 bool LogWindow::Create(HWND hParent)
 {
@@ -16,7 +17,7 @@ bool LogWindow::Create(HWND hParent)
         GetModuleHandle(nullptr),
         MAKEINTRESOURCE(IDD_LOG_WINDOW),
         nullptr,
-        DlgProc,
+        LogWindow::DlgProc,
         reinterpret_cast<LPARAM>(this));
 
     if (!m_hWnd)

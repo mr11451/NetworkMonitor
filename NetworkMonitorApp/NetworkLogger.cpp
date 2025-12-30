@@ -1,8 +1,11 @@
 #include "framework.h"
 #include "NetworkLogger.h"
-#include <chrono>
-#include <shlobj.h>
+#include "LogWindow.h"
+#include <sstream>
+#include <iomanip>
+#include <mutex> // 既にインクルード済みであれば不要
 
+// Singleton instance getter
 NetworkLogger& NetworkLogger::GetInstance()
 {
     static NetworkLogger instance;
@@ -10,46 +13,14 @@ NetworkLogger& NetworkLogger::GetInstance()
 }
 
 NetworkLogger::NetworkLogger()
+    : m_isLogging(false)
+    , m_logFilePath(L"")
 {
-    // バイナリログと同じディレクトリを使用
-    std::wstring logDir = GetDefaultLogDirectory();
-    
-    // タイムスタンプ付きのファイル名を生成
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    
-    WCHAR fileName[MAX_PATH];
-    swprintf_s(fileName, L"\\TextLog_%04d%02d%02d_%02d%02d%02d.txt",
-        st.wYear, st.wMonth, st.wDay,
-        st.wHour, st.wMinute, st.wSecond);
-    
-    m_logFilePath = logDir + fileName;
 }
 
 NetworkLogger::~NetworkLogger()
 {
-}
-
-std::wstring NetworkLogger::GetDefaultLogDirectory() const
-{
-    WCHAR documentsPath[MAX_PATH];
-    
-    // ドキュメントフォルダを取得
-    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_PERSONAL, nullptr, 0, documentsPath)))
-    {
-        std::wstring logPath = documentsPath;
-        logPath += L"\\NetworkMonitor";
-        
-        // ディレクトリが存在しない場合は作成
-        CreateDirectoryW(logPath.c_str(), nullptr);
-        
-        return logPath;
-    }
-    
-    // フォールバック: TEMPフォルダ
-    WCHAR tempPath[MAX_PATH];
-    GetTempPathW(MAX_PATH, tempPath);
-    return tempPath;
+    StopLogging();
 }
 
 void NetworkLogger::SetLogFilePath(const std::wstring& filePath)
@@ -64,61 +35,110 @@ std::wstring NetworkLogger::GetLogFilePath() const
     return m_logFilePath;
 }
 
-std::wstring NetworkLogger::GetTimestamp()
-{
-    auto now = std::chrono::system_clock::now();
-    auto time = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()) % 1000;
-
-    std::tm localTime;
-    localtime_s(&localTime, &time);
-
-    std::wstringstream ss;
-    ss << std::put_time(&localTime, L"%Y-%m-%d %H:%M:%S")
-       << L"." << std::setfill(L'0') << std::setw(3) << ms.count();
-    return ss.str();
-}
-
-void NetworkLogger::WriteLog(const std::wstring& message)
+bool NetworkLogger::StartLogging(const std::wstring& filePath)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    std::wofstream logFile(m_logFilePath, std::ios::app);
-    if (logFile.is_open())
+    
+    if (m_isLogging)
     {
-        logFile << message << std::endl;
-        logFile.close();
+        return false;
+    }
+    
+    m_logFilePath = filePath;
+    m_logFile.open(filePath, std::ios::out | std::ios::app);
+    
+    if (!m_logFile.is_open())
+    {
+        return false;
+    }
+    
+    m_isLogging = true;
+    
+    // ログ開始のヘッダーを書き込む
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    
+    m_logFile << L"\n=== Logging Started ===" << std::endl;
+    m_logFile << FormatTimestamp(st) << L" : Log session started" << std::endl;
+    m_logFile.flush();
+    
+    return true;
+}
+
+void NetworkLogger::StopLogging()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    if (m_isLogging && m_logFile.is_open())
+    {
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        
+        m_logFile << FormatTimestamp(st) << L" : Log session ended" << std::endl;
+        m_logFile << L"=== Logging Stopped ===" << std::endl;
+        m_logFile.close();
+        
+        m_isLogging = false;
     }
 }
 
-void NetworkLogger::LogRequest(const std::wstring& url, const std::wstring& method)
+void NetworkLogger::LogRequest(const std::wstring& message, const std::wstring& requestType)
 {
-    std::wstringstream ss;
-    ss << L"[" << GetTimestamp() << L"] REQUEST - Method: " << method
-       << L", URL: " << url;
-    WriteLog(ss.str());
-}
-
-void NetworkLogger::LogResponse(DWORD statusCode, const std::string& responseData, DWORD dataSize)
-{
-    std::wstringstream ss;
-    ss << L"[" << GetTimestamp() << L"] RESPONSE - Status: " << statusCode
-       << L", Size: " << dataSize << L" bytes";
-    WriteLog(ss.str());
-
-    if (dataSize > 0 && dataSize < 1024)
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    if (!m_isLogging || !m_logFile.is_open())
     {
-        std::wstring wResponseData(responseData.begin(), responseData.end());
-        ss.str(L"");
-        ss << L"[" << GetTimestamp() << L"] DATA - " << wResponseData;
-        WriteLog(ss.str());
+        return;
     }
+    
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    
+    m_logFile << FormatTimestamp(st) 
+              << L" [" << requestType << L"] " 
+              << message << std::endl;
+    m_logFile.flush();
 }
 
-void NetworkLogger::LogError(const std::wstring& errorMessage, DWORD errorCode)
+void NetworkLogger::LogResponse(unsigned long statusCode, const std::string& response, unsigned long size)
 {
     std::wstringstream ss;
-    ss << L"[" << GetTimestamp() << L"] ERROR - " << errorMessage
-       << L" (Code: " << errorCode << L")";
-    WriteLog(ss.str());
+    ss << L"HTTP Response - Status: " << statusCode 
+       << L", Size: " << size << L" bytes";
+    
+    LogWindow::GetInstance().AddLogThreadSafe(ss.str());
+}
+
+void NetworkLogger::LogError(const std::wstring& errorMessage, unsigned long errorCode)
+{
+    std::wstringstream ss;
+    ss << L"Error: " << errorMessage << L" (Code: " << errorCode << L")";
+    
+    LogWindow::GetInstance().AddLogThreadSafe(ss.str());
+}
+
+// int版のLogErrorオーバーロード（PacketCaptureクラスからの呼び出し用）
+void NetworkLogger::LogError(const std::wstring& errorMessage, int errorCode)
+{
+    LogError(errorMessage, static_cast<unsigned long>(errorCode));
+}
+
+std::wstring NetworkLogger::FormatTimestamp(const SYSTEMTIME& st) const
+{
+    std::wostringstream oss;
+    oss << std::setfill(L'0')
+        << std::setw(4) << st.wYear << L"-"
+        << std::setw(2) << st.wMonth << L"-"
+        << std::setw(2) << st.wDay << L" "
+        << std::setw(2) << st.wHour << L":"
+        << std::setw(2) << st.wMinute << L":"
+        << std::setw(2) << st.wSecond << L"."
+        << std::setw(3) << st.wMilliseconds;
+    return oss.str();
+}
+
+bool NetworkLogger::IsLogging() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_isLogging;
 }

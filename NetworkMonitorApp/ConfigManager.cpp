@@ -80,3 +80,40 @@ USHORT ConfigManager::LoadLastPort() const
     
     return static_cast<USHORT>(port);
 }
+
+bool ConfigManager::SaveLastIPAddress(const std::wstring& ipAddress)
+{
+    std::wstring configPath = GetConfigFilePath();
+    
+    // 空文字列の場合はデフォルト値を保存
+    const std::wstring& valueToSave = ipAddress.empty() ? DEFAULT_IP : ipAddress;
+    
+    return WritePrivateProfileStringW(
+        SECTION_NAME,
+        KEY_LAST_IP,
+        valueToSave.c_str(),
+        configPath.c_str()
+    ) != 0;
+}
+
+std::wstring ConfigManager::LoadLastIPAddress() const
+{
+    std::wstring configPath = GetConfigFilePath();
+    WCHAR buffer[256];
+    
+    DWORD result = GetPrivateProfileStringW(
+        SECTION_NAME,
+        KEY_LAST_IP,
+        DEFAULT_IP,
+        buffer,
+        256,
+        configPath.c_str()
+    );
+    
+    if (result > 0)
+    {
+        return std::wstring(buffer);
+    }
+    
+    return DEFAULT_IP;
+}
