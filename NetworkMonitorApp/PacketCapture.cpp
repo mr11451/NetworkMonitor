@@ -4,6 +4,8 @@
 #include "LogWindow.h"
 #include "UIHelper.h"
 #include "Resource.h"
+#include "PacketCaptureIPv4.h"
+#include "PacketCaptureIPv6.h"
 
 PacketCapture::PacketCapture()
     : m_ipv4Capture(std::make_unique<PacketCaptureIPv4>())
@@ -32,13 +34,13 @@ void PacketCapture::SetPacketCallback(std::function<void(const PacketInfo&)> cal
     }
 }
 
-bool PacketCapture::StartCapture(USHORT targetPort)
+bool PacketCapture::StartCapture(USHORT targetPort, const std::wstring& targetIP)
 {
     // デフォルトは両方起動
-    return StartCaptureWithMode(targetPort, CaptureMode::Both);
+    return StartCaptureWithMode(targetPort, targetIP, CaptureMode::Both);
 }
 
-bool PacketCapture::StartCaptureWithMode(USHORT targetPort, CaptureMode mode)
+bool PacketCapture::StartCaptureWithMode(USHORT targetPort, const std::wstring& targetIP, CaptureMode mode)
 {
     bool ipv4Success = false;
     bool ipv6Success = false;
@@ -48,7 +50,7 @@ bool PacketCapture::StartCaptureWithMode(USHORT targetPort, CaptureMode mode)
     {
         if (m_ipv4Capture)
         {
-            ipv4Success = m_ipv4Capture->StartCapture(targetPort);
+            ipv4Success = m_ipv4Capture->StartCapture(targetPort, targetIP);
         }
     }
     
@@ -57,7 +59,7 @@ bool PacketCapture::StartCaptureWithMode(USHORT targetPort, CaptureMode mode)
     {
         if (m_ipv6Capture)
         {
-            ipv6Success = m_ipv6Capture->StartCapture(targetPort);
+            ipv6Success = m_ipv6Capture->StartCapture(targetPort, targetIP);
         }
     }
     
@@ -120,24 +122,24 @@ bool PacketCapture::IsCapturing() const
     return ipv4Capturing || ipv6Capturing;
 }
 
-bool PacketCapture::StartIPv4Capture(USHORT targetPort)
+bool PacketCapture::StartIPv4Capture(USHORT targetPort, const std::wstring& targetIP)
 {
     if (!m_ipv4Capture)
     {
         return false;
     }
     
-    return m_ipv4Capture->StartCapture(targetPort);
+    return m_ipv4Capture->StartCapture(targetPort, targetIP);
 }
 
-bool PacketCapture::StartIPv6Capture(USHORT targetPort)
+bool PacketCapture::StartIPv6Capture(USHORT targetPort, const std::wstring& targetIP)
 {
     if (!m_ipv6Capture)
     {
         return false;
     }
     
-    return m_ipv6Capture->StartCapture(targetPort);
+    return m_ipv6Capture->StartCapture(targetPort, targetIP);
 }
 
 void PacketCapture::StopIPv4Capture()
@@ -164,4 +166,25 @@ bool PacketCapture::IsIPv4Capturing() const
 bool PacketCapture::IsIPv6Capturing() const
 {
     return m_ipv6Capture && m_ipv6Capture->IsCapturing();
+}
+
+bool PacketCapture::IsValidIPAddress(const std::wstring& ip, CaptureMode mode)
+{
+    switch (mode)
+    {
+    case CaptureMode::IPv4Only:
+        // IPv4として有効かつ使用可能
+        return PacketCaptureIPv4::IsValidUsableIPAddress(ip);
+    case CaptureMode::IPv6Only:
+        // IPv6として有効かつ使用可能
+        return PacketCaptureIPv6::IsValidUsableIPAddress(ip);
+    case CaptureMode::Both:
+        if (PacketCaptureIPv4::IsValidUsableIPAddress(ip))
+            return true;
+        if (PacketCaptureIPv6::IsValidUsableIPAddress(ip))
+            return true;
+        return false;
+    default:
+        return false;
+    }
 }

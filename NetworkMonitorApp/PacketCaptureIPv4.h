@@ -22,16 +22,18 @@ public:
     PacketCaptureIPv4();
     ~PacketCaptureIPv4();
 
-    bool StartCapture(USHORT targetPort);
-    void StopCapture();
-    bool IsCapturing() const { return m_isCapturing; }
-    
     void SetPacketCallback(std::function<void(const PacketInfo&)> callback);
+    bool StartCapture(USHORT targetPort, const std::wstring& targetIP);
+    void StopCapture();
+    bool IsCapturing() const;
+
+    // 追加: IPv4アドレスが有効かつ使用可能かチェック
+    static bool IsValidUsableIPAddress(const std::wstring& ip);
 
 private:
     // 初期化関連
     bool InitializeWinsock();
-    bool InitializeRawSocket();
+    bool InitializeRawSocket(const std::wstring& targetIP);
     bool CreateRawSocket();
     bool GetLocalAddressAndBind(sockaddr_in& bindAddr);
     bool ConfigureSocketOptions();

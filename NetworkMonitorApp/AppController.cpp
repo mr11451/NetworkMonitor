@@ -113,17 +113,17 @@ bool AppController::StartCapture(HWND hDlg, USHORT port, const std::wstring& tar
     {
     case IPAddressType::None:
         // 空または全IP対象 → IPv4とIPv6両方を起動
-        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, PacketCapture::CaptureMode::Both);
+        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, targetIP, PacketCapture::CaptureMode::Both);
         break;
         
     case IPAddressType::IPv4:
         // IPv4アドレス → IPv4のみ起動
-        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, PacketCapture::CaptureMode::IPv4Only);
+        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, targetIP, PacketCapture::CaptureMode::IPv4Only);
         break;
         
     case IPAddressType::IPv6:
         // IPv6アドレス → IPv6のみ起動
-        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, PacketCapture::CaptureMode::IPv6Only);
+        captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, targetIP, PacketCapture::CaptureMode::IPv6Only);
         break;
     }
     

@@ -20,37 +20,39 @@ public:
     PacketCaptureIPv6();
     ~PacketCaptureIPv6();
 
-    bool StartCapture(USHORT targetPort);
-    void StopCapture();
-    bool IsCapturing() const { return m_isCapturing; }
-    
     void SetPacketCallback(std::function<void(const PacketInfo&)> callback);
+    bool StartCapture(USHORT targetPort, const std::wstring& targetIP);
+    void StopCapture();
+    bool IsCapturing() const;
+
+    // 追加: IPv6アドレスが有効かつ使用可能かチェック
+    static bool IsValidUsableIPAddress(const std::wstring& ip);
 
 private:
     // 初期化関連
     bool InitializeWinsock();
-    bool InitializeRawSocketIPv6();
-    bool CreateRawSocketIPv6();
-    bool GetLocalAddressAndBindIPv6(sockaddr_in6& bindAddr);
-    bool EnablePromiscuousModeIPv6();
+    bool InitializeRawSocket(const std::wstring& targetIP);
+    bool CreateRawSocket();
+    bool GetLocalAddressAndBind(sockaddr_in6& bindAddr);
+    bool EnablePromiscuousMode();
     
     // ソケット管理
-    void CloseSocketIPv6();
+    void CloseSocket();
     
     // ログ関連
-    void LogInitializationSuccessIPv6(const sockaddr_in6& bindAddr);
+    void LogInitializationSuccess(const sockaddr_in6& bindAddr);
     void LogCaptureStarted(USHORT port);
     void LogCaptureStopped();
     
     // キャプチャスレッド
-    void CaptureThreadIPv6();
+    void CaptureThread();
     bool HandleSocketError(int error);
     
     // パケット解析
-    bool ParseIPv6Packet(const BYTE* buffer, DWORD size);
-    bool ParseTCPPacketIPv6(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
+    bool ParseIPPacket(const BYTE* buffer, DWORD size);
+    bool ParseTCPPacket(const BYTE* ipHeader, DWORD ipHeaderLen,
                             const BYTE* tcpData, DWORD tcpDataLen);
-    bool ParseUDPPacketIPv6(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
+    bool ParseUDPPacket(const BYTE* ipHeader, DWORD ipHeaderLen,
                             const BYTE* udpData, DWORD udpDataLen);
     
     // ヘルパー関数
@@ -60,12 +62,12 @@ private:
     void ExtractPayload(PacketInfo& info, const BYTE* data, 
                        DWORD headerLen, DWORD totalLen);
     void NotifyPacket(const PacketInfo& info);
-    std::string IPv6ToString(const BYTE* ipv6Addr);
+    std::string IPToString(const BYTE* ipAddr);
 
     // メンバー変数
-    SOCKET m_socketIPv6;
+    SOCKET m_socket;
     USHORT m_targetPort;
     std::atomic<bool> m_isCapturing;
-    std::thread m_captureThreadIPv6;
+    std::thread m_captureThread;
     std::function<void(const PacketInfo&)> m_callback;
 };

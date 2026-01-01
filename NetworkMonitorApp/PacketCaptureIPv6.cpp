@@ -5,6 +5,7 @@
 #include "LogWindow.h"
 #include "UIHelper.h"
 #include "Resource.h"
+#include <ws2tcpip.h>
 
 // 定数定義
 namespace
@@ -13,7 +14,7 @@ namespace
 }
 
 PacketCaptureIPv6::PacketCaptureIPv6()
-    : m_socketIPv6(INVALID_SOCKET)
+    : m_socket(INVALID_SOCKET)
     , m_targetPort(0)
     , m_isCapturing(false)
 {
@@ -46,32 +47,66 @@ void PacketCaptureIPv6::SetPacketCallback(std::function<void(const PacketInfo&)>
     m_callback = callback;
 }
 
-bool PacketCaptureIPv6::InitializeRawSocketIPv6()
+bool PacketCaptureIPv6::InitializeRawSocket(const std::wstring& targetIP)
 {
-    if (!CreateRawSocketIPv6())
+    if (!CreateRawSocket())
     {
         return false;
     }
 
-    sockaddr_in6 bindAddr;
-    if (!GetLocalAddressAndBindIPv6(bindAddr))
+    sockaddr_in6 bindAddr = {};
+    if (targetIP.empty())
+    {
+        // 従来通りローカルアドレス取得してバインド
+        if (!GetLocalAddressAndBind(bindAddr))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        // IPアドレスが有効かつ使用可能か確認
+        if (!IsValidUsableIPAddress(targetIP))
+        {
+            LogWindow::GetInstance().AddLog(L"Invalid IPv6 address specified for binding.");
+            CloseSocket();
+            return false;
+        }
+        bindAddr = {};
+        bindAddr.sin6_family = AF_INET6;
+        bindAddr.sin6_port = 0;
+        char ipStr[INET6_ADDRSTRLEN] = {0};
+        size_t converted = 0;
+        wcstombs_s(&converted, ipStr, targetIP.c_str(), _TRUNCATE);
+        if (inet_pton(AF_INET6, ipStr, &bindAddr.sin6_addr) != 1)
+        {
+            LogWindow::GetInstance().AddLog(L"Failed to convert IPv6 address for binding.");
+            CloseSocket();
+            return false;
+        }
+        bool bindSuccess = (bind(m_socket, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) != SOCKET_ERROR);
+        if (!bindSuccess)
+        {
+            int error = WSAGetLastError();
+            NetworkLogger::GetInstance().LogError(L"Failed to bind IPv6 socket to specified address", error);
+            CloseSocket();
+            return false;
+        }
+    }
+
+    if (!EnablePromiscuousMode())
     {
         return false;
     }
 
-    if (!EnablePromiscuousModeIPv6())
-    {
-        return false;
-    }
-
-    LogInitializationSuccessIPv6(bindAddr);
+    LogInitializationSuccess(bindAddr);
     return true;
 }
 
-bool PacketCaptureIPv6::CreateRawSocketIPv6()
+bool PacketCaptureIPv6::CreateRawSocket()
 {
-    m_socketIPv6 = socket(AF_INET6, SOCK_RAW, IPPROTO_IPV6);
-    if (m_socketIPv6 == INVALID_SOCKET)
+    m_socket = socket(AF_INET6, SOCK_RAW, IPPROTO_IPV6);
+    if (m_socket == INVALID_SOCKET)
     {
         int error = WSAGetLastError();
         NetworkLogger::GetInstance().LogError(L"Failed to create IPv6 raw socket", error);
@@ -80,14 +115,14 @@ bool PacketCaptureIPv6::CreateRawSocketIPv6()
     return true;
 }
 
-bool PacketCaptureIPv6::GetLocalAddressAndBindIPv6(sockaddr_in6& bindAddr)
+bool PacketCaptureIPv6::GetLocalAddressAndBind(sockaddr_in6& bindAddr)
 {
     char hostname[256];
     if (gethostname(hostname, sizeof(hostname)) == SOCKET_ERROR)
     {
         int error = WSAGetLastError();
         NetworkLogger::GetInstance().LogError(L"Failed to get hostname for IPv6", error);
-        CloseSocketIPv6();
+        CloseSocket();
         return false;
     }
 
@@ -100,7 +135,7 @@ bool PacketCaptureIPv6::GetLocalAddressAndBindIPv6(sockaddr_in6& bindAddr)
     {
         int error = WSAGetLastError();
         NetworkLogger::GetInstance().LogError(L"Failed to get IPv6 address info", error);
-        CloseSocketIPv6();
+        CloseSocket();
         return false;
     }
 
@@ -111,7 +146,7 @@ bool PacketCaptureIPv6::GetLocalAddressAndBindIPv6(sockaddr_in6& bindAddr)
            &reinterpret_cast<sockaddr_in6*>(result->ai_addr)->sin6_addr,
            sizeof(bindAddr.sin6_addr));
 
-    bool bindSuccess = (bind(m_socketIPv6, reinterpret_cast<sockaddr*>(&bindAddr), 
+    bool bindSuccess = (bind(m_socket, reinterpret_cast<sockaddr*>(&bindAddr), 
                              sizeof(bindAddr)) != SOCKET_ERROR);
     
     if (!bindSuccess)
@@ -124,27 +159,27 @@ bool PacketCaptureIPv6::GetLocalAddressAndBindIPv6(sockaddr_in6& bindAddr)
 
     if (!bindSuccess)
     {
-        CloseSocketIPv6();
+        CloseSocket();
         return false;
     }
 
     return true;
 }
 
-bool PacketCaptureIPv6::EnablePromiscuousModeIPv6()
+bool PacketCaptureIPv6::EnablePromiscuousMode()
 {
     DWORD flag = RCVALL_ON;
-    if (ioctlsocket(m_socketIPv6, SIO_RCVALL, &flag) == SOCKET_ERROR)
+    if (ioctlsocket(m_socket, SIO_RCVALL, &flag) == SOCKET_ERROR)
     {
         int error = WSAGetLastError();
         NetworkLogger::GetInstance().LogError(L"Failed to set IPv6 promiscuous mode", error);
-        CloseSocketIPv6();
+        CloseSocket();
         return false;
     }
     return true;
 }
 
-void PacketCaptureIPv6::LogInitializationSuccessIPv6(const sockaddr_in6& bindAddr)
+void PacketCaptureIPv6::LogInitializationSuccess(const sockaddr_in6& bindAddr)
 {
     char ipv6Str[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &bindAddr.sin6_addr, ipv6Str, INET6_ADDRSTRLEN);
@@ -154,16 +189,16 @@ void PacketCaptureIPv6::LogInitializationSuccessIPv6(const sockaddr_in6& bindAdd
     LogWindow::GetInstance().AddLog(msg);
 }
 
-void PacketCaptureIPv6::CloseSocketIPv6()
+void PacketCaptureIPv6::CloseSocket()
 {
-    if (m_socketIPv6 != INVALID_SOCKET)
+    if (m_socket != INVALID_SOCKET)
     {
-        closesocket(m_socketIPv6);
-        m_socketIPv6 = INVALID_SOCKET;
+        closesocket(m_socket);
+        m_socket = INVALID_SOCKET;
     }
 }
 
-bool PacketCaptureIPv6::StartCapture(USHORT targetPort)
+bool PacketCaptureIPv6::StartCapture(USHORT targetPort, const std::wstring& targetIP)
 {
     if (m_isCapturing)
     {
@@ -173,13 +208,13 @@ bool PacketCaptureIPv6::StartCapture(USHORT targetPort)
 
     m_targetPort = targetPort;
 
-    if (!InitializeRawSocketIPv6())
+    if (!InitializeRawSocket(targetIP))
     {
         return false;
     }
 
     m_isCapturing = true;
-    m_captureThreadIPv6 = std::thread(&PacketCaptureIPv6::CaptureThreadIPv6, this);
+    m_captureThread = std::thread(&PacketCaptureIPv6::CaptureThread, this);
 
     LogCaptureStarted(targetPort);
     return true;
@@ -193,14 +228,19 @@ void PacketCaptureIPv6::StopCapture()
     }
 
     m_isCapturing = false;
-    CloseSocketIPv6();
+    CloseSocket();
 
-    if (m_captureThreadIPv6.joinable())
+    if (m_captureThread.joinable())
     {
-        m_captureThreadIPv6.join();
+        m_captureThread.join();
     }
 
     LogCaptureStopped();
+}
+
+bool PacketCaptureIPv6::IsCapturing() const
+{
+    return m_isCapturing;
 }
 
 void PacketCaptureIPv6::LogCaptureStarted(USHORT port)
@@ -217,7 +257,7 @@ void PacketCaptureIPv6::LogCaptureStopped()
     LogWindow::GetInstance().AddLog(L"IPv6 capture stopped");
 }
 
-void PacketCaptureIPv6::CaptureThreadIPv6()
+void PacketCaptureIPv6::CaptureThread()
 {
     std::vector<BYTE> buffer(RECV_BUFFER_SIZE);
     DWORD packetCount = 0;
@@ -228,14 +268,14 @@ void PacketCaptureIPv6::CaptureThreadIPv6()
 
     while (m_isCapturing)
     {
-        int bytesReceived = recv(m_socketIPv6, 
+        int bytesReceived = recv(m_socket, 
                                 reinterpret_cast<char*>(buffer.data()), 
                                 RECV_BUFFER_SIZE, 0);
         
         if (bytesReceived > 0)
         {
             packetCount++;
-            ParseIPv6Packet(buffer.data(), bytesReceived);
+            ParseIPPacket(buffer.data(), bytesReceived);
         }
         else if (bytesReceived == 0)
         {
@@ -272,14 +312,14 @@ bool PacketCaptureIPv6::HandleSocketError(int error)
     return false;
 }
 
-std::string PacketCaptureIPv6::IPv6ToString(const BYTE* ipv6Addr)
+std::string PacketCaptureIPv6::IPToString(const BYTE* ipAddr)
 {
     char str[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, ipv6Addr, str, INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, ipAddr, str, INET6_ADDRSTRLEN);
     return std::string(str);
 }
 
-bool PacketCaptureIPv6::ParseIPv6Packet(const BYTE* buffer, DWORD size)
+bool PacketCaptureIPv6::ParseIPPacket(const BYTE* buffer, DWORD size)
 {
     if (size < sizeof(IPv6Header))
     {
@@ -294,15 +334,15 @@ bool PacketCaptureIPv6::ParseIPv6Packet(const BYTE* buffer, DWORD size)
     switch (ipv6Header->nextHeader)
     {
     case 6:  // TCP
-        return ParseTCPPacketIPv6(buffer, sizeof(IPv6Header), payload, payloadLen);
+        return ParseTCPPacket(buffer, sizeof(IPv6Header), payload, payloadLen);
     case 17: // UDP
-        return ParseUDPPacketIPv6(buffer, sizeof(IPv6Header), payload, payloadLen);
+        return ParseUDPPacket(buffer, sizeof(IPv6Header), payload, payloadLen);
     default:
         return false;
     }
 }
 
-bool PacketCaptureIPv6::ParseTCPPacketIPv6(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
+bool PacketCaptureIPv6::ParseTCPPacket(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
                                            const BYTE* tcpData, DWORD tcpDataLen)
 {
     if (tcpDataLen < sizeof(TCPHeader))
@@ -333,7 +373,7 @@ bool PacketCaptureIPv6::ParseTCPPacketIPv6(const BYTE* ipv6Header, DWORD ipv6Hea
     return true;
 }
 
-bool PacketCaptureIPv6::ParseUDPPacketIPv6(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
+bool PacketCaptureIPv6::ParseUDPPacket(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
                                            const BYTE* udpData, DWORD udpDataLen)
 {
     if (udpDataLen < sizeof(UDPHeader))
@@ -372,8 +412,8 @@ void PacketCaptureIPv6::FillPacketInfoIPv6(PacketInfo& info, const IPv6Header* i
                                            USHORT srcPort, USHORT dstPort,
                                            const char* protocol)
 {
-    info.sourceIP = IPv6ToString(ip->sourceIP);
-    info.destIP = IPv6ToString(ip->destIP);
+    info.sourceIP = IPToString(ip->sourceIP);
+    info.destIP = IPToString(ip->destIP);
     info.sourcePort = srcPort;
     info.destPort = dstPort;
     info.protocol = protocol;
@@ -404,4 +444,26 @@ void PacketCaptureIPv6::NotifyPacket(const PacketInfo& info)
     {
         m_callback(info);
     }
+}
+
+bool PacketCaptureIPv6::IsValidUsableIPAddress(const std::wstring& ip)
+{
+    if (ip.empty()) return false;
+
+    char ipStr[INET6_ADDRSTRLEN] = {0};
+    size_t converted = 0;
+    wcstombs_s(&converted, ipStr, ip.c_str(), _TRUNCATE);
+
+    sockaddr_in6 sa6 = {};
+    if (inet_pton(AF_INET6, ipStr, &(sa6.sin6_addr)) != 1)
+        return false;
+
+    // ::/128, ::1/128 などは除外
+    static const unsigned char zero[16] = {0};
+    static const unsigned char loopback[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+    if (memcmp(sa6.sin6_addr.s6_addr, zero, 16) == 0 ||
+        memcmp(sa6.sin6_addr.s6_addr, loopback, 16) == 0)
+        return false;
+
+    return true;
 }

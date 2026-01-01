@@ -5,6 +5,7 @@
 #include "LogWindow.h"
 #include "UIHelper.h"
 #include "Resource.h"
+#include <ws2tcpip.h>
 
 // 定数定義
 namespace
@@ -49,17 +50,51 @@ void PacketCaptureIPv4::SetPacketCallback(std::function<void(const PacketInfo&)>
     m_callback = callback;
 }
 
-bool PacketCaptureIPv4::InitializeRawSocket()
+bool PacketCaptureIPv4::InitializeRawSocket(const std::wstring& targetIP)
 {
     if (!CreateRawSocket())
     {
         return false;
     }
 
-    sockaddr_in bindAddr;
-    if (!GetLocalAddressAndBind(bindAddr))
+    sockaddr_in bindAddr = {};
+    if (targetIP.empty())
     {
-        return false;
+        // 従来通りローカルアドレス取得してバインド
+        if (!GetLocalAddressAndBind(bindAddr))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        // IPアドレスが有効かつ使用可能か確認
+        if (!IsValidUsableIPAddress(targetIP))
+        {
+            LogWindow::GetInstance().AddLog(L"Invalid IPv4 address specified for binding.");
+            CloseSocket();
+            return false;
+        }
+        bindAddr = {};
+        bindAddr.sin_family = AF_INET;
+        bindAddr.sin_port = 0;
+        char ipStr[INET_ADDRSTRLEN] = {0};
+        size_t converted = 0;
+        wcstombs_s(&converted, ipStr, targetIP.c_str(), _TRUNCATE);
+        if (inet_pton(AF_INET, ipStr, &bindAddr.sin_addr) != 1)
+        {
+            LogWindow::GetInstance().AddLog(L"Failed to convert IPv4 address for binding.");
+            CloseSocket();
+            return false;
+        }
+        bool bindSuccess = (bind(m_socket, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) != SOCKET_ERROR);
+        if (!bindSuccess)
+        {
+            int error = WSAGetLastError();
+            NetworkLogger::GetInstance().LogError(L"Failed to bind IPv4 socket to specified address", error);
+            CloseSocket();
+            return false;
+        }
     }
 
     if (!ConfigureSocketOptions())
@@ -221,7 +256,7 @@ void PacketCaptureIPv4::CloseSocket()
     }
 }
 
-bool PacketCaptureIPv4::StartCapture(USHORT targetPort)
+bool PacketCaptureIPv4::StartCapture(USHORT targetPort, const std::wstring& targetIP)
 {
     if (m_isCapturing)
     {
@@ -233,7 +268,7 @@ bool PacketCaptureIPv4::StartCapture(USHORT targetPort)
 
     m_targetPort = targetPort;
 
-    if (!InitializeRawSocket())
+    if (!InitializeRawSocket(targetIP))
     {
         return false;
     }
@@ -261,6 +296,11 @@ void PacketCaptureIPv4::StopCapture()
     }
 
     LogCaptureStopped();
+}
+
+bool PacketCaptureIPv4::IsCapturing() const
+{
+    return m_isCapturing;
 }
 
 void PacketCaptureIPv4::LogCaptureStarted(USHORT port)
@@ -488,4 +528,24 @@ void PacketCaptureIPv4::NotifyPacket(const PacketInfo& info)
     {
         m_callback(info);
     }
+}
+
+bool PacketCaptureIPv4::IsValidUsableIPAddress(const std::wstring& ip)
+{
+    if (ip.empty()) return false;
+
+    char ipStr[INET_ADDRSTRLEN] = {0};
+    size_t converted = 0;
+    wcstombs_s(&converted, ipStr, ip.c_str(), _TRUNCATE);
+
+    sockaddr_in sa4 = {};
+    if (inet_pton(AF_INET, ipStr, &(sa4.sin_addr)) != 1)
+        return false;
+
+    // 0.0.0.0, 255.255.255.255, 127.x.x.x などは除外
+    unsigned long addr = ntohl(sa4.sin_addr.s_addr);
+    if (addr == 0 || addr == 0xFFFFFFFF || (addr >> 24) == 127)
+        return false;
+
+    return true;
 }
