@@ -458,11 +458,9 @@ bool PacketCaptureIPv6::IsValidUsableIPAddress(const std::wstring& ip)
     if (inet_pton(AF_INET6, ipStr, &(sa6.sin6_addr)) != 1)
         return false;
 
-    // ::/128, ::1/128 ‚È‚Ç‚ÍœŠO
+    // ::/128‚ÍœŠO
     static const unsigned char zero[16] = {0};
-    static const unsigned char loopback[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-    if (memcmp(sa6.sin6_addr.s6_addr, zero, 16) == 0 ||
-        memcmp(sa6.sin6_addr.s6_addr, loopback, 16) == 0)
+    if (memcmp(sa6.sin6_addr.s6_addr, zero, 16) == 0)
         return false;
 
     return true;
