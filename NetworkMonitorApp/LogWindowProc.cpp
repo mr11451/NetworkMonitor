@@ -12,6 +12,12 @@ INT_PTR CALLBACK LogWindow::DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
     {
         pThis = reinterpret_cast<LogWindow*>(lParam);
         SetWindowLongPtr(hDlg, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
+
+        // --- リソースで管理されたコントロールのハンドル取得 ---
+        pThis->m_hListBox = GetDlgItem(hDlg, IDC_LOG_LISTBOX);
+        pThis->m_hWnd = hDlg;
+        // ------------------------------------------------------
+
         return (INT_PTR)TRUE;
     }
     else
@@ -23,7 +29,7 @@ INT_PTR CALLBACK LogWindow::DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
     {
         switch (message)
         {
-        case WM_ADD_LOG:  // 今は#defineなのでswitch文で使用可能
+        case WM_ADD_LOG:
         {
             std::wstring* pMessage = reinterpret_cast<std::wstring*>(lParam);
             if (pMessage)
@@ -38,21 +44,23 @@ INT_PTR CALLBACK LogWindow::DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
         {
             RECT rc;
             GetClientRect(hDlg, &rc);
-            
+
+            // マージンを定義
+            const int margin = 10;
+			const int boxtop = 40;
+
+            // リストボックスをウィンドウ全体に広げる（マージン分だけ内側に）
             if (pThis->m_hListBox && IsWindow(pThis->m_hListBox))
             {
-                SetWindowPos(pThis->m_hListBox, nullptr,
-                    10, 65,
-                    rc.right - 20, rc.bottom - 75,
-                    SWP_NOZORDER);
-            }
-            
-            if (pThis->m_hLogPathLabel && IsWindow(pThis->m_hLogPathLabel))
-            {
-                SetWindowPos(pThis->m_hLogPathLabel, nullptr,
-                    10, 42,
-                    rc.right - 20, 16,
-                    SWP_NOZORDER);
+                SetWindowPos(
+                    pThis->m_hListBox,
+                    nullptr,
+                    margin,
+                    rc.top + boxtop + 2 * margin,
+                    rc.right - 2 * margin,
+                    rc.bottom - boxtop - 3 * margin,
+                    SWP_NOZORDER
+                );
             }
             return (INT_PTR)TRUE;
         }

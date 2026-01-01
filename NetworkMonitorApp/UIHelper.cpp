@@ -5,13 +5,21 @@
 #include <sstream>
 #include <ws2tcpip.h>
 #include <algorithm>
+#include <string>
+#include <cstdlib>
+#include <Windows.h>
+#include <ws2ipdef.h>
+#include <ws2def.h>
+#include <cctype>
+#include <in6addr.h>
+#include <cstdio>
 
 #pragma comment(lib, "ws2_32.lib")
 
 extern HINSTANCE hInst;
 
-#define MAX_PORT_STRING_LENGTH 6 // 65535 + null終端で6文字
-#define MAX_IP_STRING_LENGTH 46  // IPv6の最大長 + null終端
+constexpr auto MAX_PORT_STRING_LENGTH = 6; // 65535 + null終端で6文字
+constexpr auto MAX_IP_STRING_LENGTH = 46;  // IPv6の最大長 + null終端
 
 std::wstring UIHelper::LoadStringFromResource(UINT stringID)
 {
@@ -122,7 +130,7 @@ bool UIHelper::ValidateIPAddress(const std::wstring& ipAddress)
     
     if (result > 0)
     {
-        struct in_addr addr4;
+        struct in_addr addr4 {};
         if (inet_pton(AF_INET, ipv4Buffer, &addr4) == 1)
         {
             return true; // 有効なIPv4アドレス
@@ -136,7 +144,7 @@ bool UIHelper::ValidateIPAddress(const std::wstring& ipAddress)
     
     if (result > 0)
     {
-        struct in6_addr addr6;
+        struct in6_addr addr6 {};
         if (inet_pton(AF_INET6, ipv6Buffer, &addr6) == 1)
         {
             return true; // 有効なIPv6アドレス
@@ -191,7 +199,7 @@ IPAddressType UIHelper::GetIPAddressType(const std::wstring& ipAddress)
     
     if (result > 0)
     {
-        struct in_addr addr4;
+        struct in_addr addr4 {};
         if (inet_pton(AF_INET, ipv4Buffer, &addr4) == 1)
         {
             return IPAddressType::IPv4;
@@ -205,7 +213,7 @@ IPAddressType UIHelper::GetIPAddressType(const std::wstring& ipAddress)
     
     if (result > 0)
     {
-        struct in6_addr addr6;
+        struct in6_addr addr6 {};
         if (inet_pton(AF_INET6, ipv6Buffer, &addr6) == 1)
         {
             return IPAddressType::IPv6;

@@ -2,6 +2,12 @@
 #include "NetworkMonitor.h"
 #include "NetworkLogger.h"
 #include "LogWindow.h"
+#include <sstream>
+#include <Windows.h>
+#include <vector>
+#include <cstdlib>
+#include <string>
+#include <winhttp.h>
 
 NetworkMonitor::NetworkMonitor()
     : m_hSession(nullptr)
@@ -38,8 +44,8 @@ bool NetworkMonitor::ParseUrl(const std::wstring& url, std::wstring& host,
     URL_COMPONENTS urlComp = { 0 };
     urlComp.dwStructSize = sizeof(urlComp);
 
-    WCHAR hostName[256];
-    WCHAR urlPath[2048];
+    WCHAR hostName[256]{};
+    WCHAR urlPath[2048]{};
 
     urlComp.lpszHostName = hostName;
     urlComp.dwHostNameLength = _countof(hostName);
@@ -51,7 +57,8 @@ bool NetworkMonitor::ParseUrl(const std::wstring& url, std::wstring& host,
         return false;
     }
 
-    host = hostName;
+    // hostNameがnull終端されていることを保証するため、dwHostNameLengthを使ってstd::wstringを構築
+    host.assign(hostName, urlComp.dwHostNameLength);
     path = urlPath;
     port = urlComp.nPort;
     useHttps = (urlComp.nScheme == INTERNET_SCHEME_HTTPS);

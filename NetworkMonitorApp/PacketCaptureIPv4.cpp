@@ -542,9 +542,9 @@ bool PacketCaptureIPv4::IsValidUsableIPAddress(const std::wstring& ip)
     if (inet_pton(AF_INET, ipStr, &(sa4.sin_addr)) != 1)
         return false;
 
-    // 0.0.0.0, 255.255.255.255, 127.x.x.x などは除外
+    // 0.0.0.0, 255.255.255.255, 127.x.x.x などは除外（127.0.0.1は例外）
     unsigned long addr = ntohl(sa4.sin_addr.s_addr);
-    if (addr == 0 || addr == 0xFFFFFFFF || (addr >> 24) == 127)
+    if ((addr == 0 || addr == 0xFFFFFFFF || (addr >> 24) == 127)&&(addr != 0x7f000001))
         return false;
 
     return true;
