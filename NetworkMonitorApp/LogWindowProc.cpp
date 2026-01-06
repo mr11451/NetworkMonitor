@@ -47,7 +47,7 @@ INT_PTR CALLBACK LogWindow::DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
 
             // マージンを定義
             const int margin = 10;
-			const int boxtop = 40;
+            const int boxtop = 40;
 
             // リストボックスをウィンドウ全体に広げる（マージン分だけ内側に）
             if (pThis->m_hListBox && IsWindow(pThis->m_hListBox))
