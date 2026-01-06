@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <windows.h>
 #include <winsock2.h>
@@ -11,7 +11,7 @@
 #include <atomic>
 #include <functional>
 #include "PacketInfo.h"
-#include "ProtocolHeaders.h"  // ‹¤’Êƒwƒbƒ_[‚ğƒCƒ“ƒNƒ‹[ƒh
+#include "ProtocolHeaders.h"  // å…±é€šãƒ˜ãƒƒãƒ€ãƒ¼ã‚’ã‚¤ãƒ³ã‚¯ãƒ«ãƒ¼ãƒ‰
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "iphlpapi.lib")
@@ -27,11 +27,11 @@ public:
     void StopCapture();
     bool IsCapturing() const;
 
-    // ’Ç‰Á: IPv4ƒAƒhƒŒƒX‚ª—LŒø‚©‚Âg—p‰Â”\‚©ƒ`ƒFƒbƒN
+    // è¿½åŠ : IPv4ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒæœ‰åŠ¹ã‹ã¤ä½¿ç”¨å¯èƒ½ã‹ãƒã‚§ãƒƒã‚¯
     static bool IsValidUsableIPAddress(const std::wstring& ip);
 
 private:
-    // ‰Šú‰»ŠÖ˜A
+    // åˆæœŸåŒ–é–¢é€£
     bool InitializeWinsock();
     bool InitializeRawSocket(const std::wstring& targetIP);
     bool CreateRawSocket();
@@ -39,10 +39,10 @@ private:
     bool ConfigureSocketOptions();
     bool EnablePromiscuousMode();
     
-    // ƒ\ƒPƒbƒgŠÇ—
+    // ã‚½ã‚±ãƒƒãƒˆç®¡ç†
     void CloseSocket();
     
-    // ƒƒOŠÖ˜A
+    // ãƒ­ã‚°é–¢é€£
     void LogSocketError(int resourceId, int errorCode);
     void LogInitializationSuccess(const sockaddr_in& bindAddr);
     void LogCaptureStarted(USHORT port);
@@ -50,18 +50,18 @@ private:
     void LogCaptureThreadStarted();
     void LogCaptureThreadEnded(DWORD packetCount);
     
-    // ƒLƒƒƒvƒ`ƒƒƒXƒŒƒbƒh
+    // ã‚­ãƒ£ãƒ—ãƒãƒ£ã‚¹ãƒ¬ãƒƒãƒ‰
     void CaptureThread();
     bool HandleSocketError(int error);
     
-    // ƒpƒPƒbƒg‰ğÍ
+    // ãƒ‘ã‚±ãƒƒãƒˆè§£æ
     bool ParseIPPacket(const BYTE* buffer, DWORD size);
     bool ParseTCPPacket(const BYTE* ipHeader, DWORD ipHeaderLen, 
                         const BYTE* tcpData, DWORD tcpDataLen);
     bool ParseUDPPacket(const BYTE* ipHeader, DWORD ipHeaderLen, 
                         const BYTE* udpData, DWORD udpDataLen);
     
-    // ƒwƒ‹ƒp[ŠÖ”
+    // ãƒ˜ãƒ«ãƒ‘ãƒ¼é–¢æ•°
     bool IsTargetPort(USHORT srcPort, USHORT dstPort) const;
     void FillPacketInfo(PacketInfo& info, const IPHeader* ip,
                        USHORT srcPort, USHORT dstPort, const char* protocol);
@@ -70,7 +70,7 @@ private:
     void NotifyPacket(const PacketInfo& info);
     std::string IPToString(DWORD ip);
 
-    // ƒƒ“ƒo[•Ï”
+    // ãƒ¡ãƒ³ãƒãƒ¼å¤‰æ•°
     SOCKET m_socket;
     USHORT m_targetPort;
     std::atomic<bool> m_isCapturing;

@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #define NOMINMAX
 #include "PacketCaptureIPv4.h"
 #include "NetworkLogger.h"
@@ -7,12 +7,12 @@
 #include "Resource.h"
 #include <ws2tcpip.h>
 
-// ’è”’è‹`
+// å®šæ•°å®šç¾©
 namespace
 {
     constexpr int RECV_BUFFER_SIZE = 65536;     // 64KB
     constexpr int SOCKET_BUFFER_SIZE = 256 * 1024; // 256KB
-    constexpr DWORD RECV_TIMEOUT_MS = 5000;     // 5•b
+    constexpr DWORD RECV_TIMEOUT_MS = 5000;     // 5ç§’
 }
 
 PacketCaptureIPv4::PacketCaptureIPv4()
@@ -60,7 +60,7 @@ bool PacketCaptureIPv4::InitializeRawSocket(const std::wstring& targetIP)
     sockaddr_in bindAddr = {};
     if (targetIP.empty())
     {
-        // ]—ˆ’Ê‚èƒ[ƒJƒ‹ƒAƒhƒŒƒXŽæ“¾‚µ‚ÄƒoƒCƒ“ƒh
+        // å¾“æ¥é€šã‚Šãƒ­ãƒ¼ã‚«ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹å–å¾—ã—ã¦ãƒã‚¤ãƒ³ãƒ‰
         if (!GetLocalAddressAndBind(bindAddr))
         {
             return false;
@@ -68,7 +68,7 @@ bool PacketCaptureIPv4::InitializeRawSocket(const std::wstring& targetIP)
     }
     else
     {
-        // IPƒAƒhƒŒƒX‚ª—LŒø‚©‚ÂŽg—p‰Â”\‚©Šm”F
+        // IPã‚¢ãƒ‰ãƒ¬ã‚¹ãŒæœ‰åŠ¹ã‹ã¤ä½¿ç”¨å¯èƒ½ã‹ç¢ºèª
         if (!IsValidUsableIPAddress(targetIP))
         {
             LogWindow::GetInstance().AddLog(L"Invalid IPv4 address specified for binding.");
@@ -542,7 +542,7 @@ bool PacketCaptureIPv4::IsValidUsableIPAddress(const std::wstring& ip)
     if (inet_pton(AF_INET, ipStr, &(sa4.sin_addr)) != 1)
         return false;
 
-    // 0.0.0.0, 255.255.255.255, 127.x.x.x ‚È‚Ç‚ÍœŠOi127.0.0.1‚Í—áŠOj
+    // 0.0.0.0, 255.255.255.255, 127.x.x.x ãªã©ã¯é™¤å¤–ï¼ˆ127.0.0.1ã¯ä¾‹å¤–ï¼‰
     unsigned long addr = ntohl(sa4.sin_addr.s_addr);
     if ((addr == 0 || addr == 0xFFFFFFFF || (addr >> 24) == 127)&&(addr != 0x7f000001))
         return false;

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <Windows.h>
 #include <string>
 
@@ -7,15 +7,15 @@ class ConfigManager
 public:
     static ConfigManager& GetInstance();
     
-    // ƒ|[ƒg”Ô†‚Ì•Û‘¶‚Æ“Ç‚İ‚İ
+    // ãƒãƒ¼ãƒˆç•ªå·ã®ä¿å­˜ã¨èª­ã¿è¾¼ã¿
     bool SaveLastPort(USHORT port);
     USHORT LoadLastPort() const;
     
-    // IPƒAƒhƒŒƒX‚Ì•Û‘¶‚Æ“Ç‚İ‚İ
+    // IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®ä¿å­˜ã¨èª­ã¿è¾¼ã¿
     bool SaveLastIPAddress(const std::wstring& ipAddress);
     std::wstring LoadLastIPAddress() const;
     
-    // İ’èƒtƒ@ƒCƒ‹‚ÌƒpƒXæ“¾
+    // è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ‘ã‚¹å–å¾—
     std::wstring GetConfigFilePath() const;
 
 private:

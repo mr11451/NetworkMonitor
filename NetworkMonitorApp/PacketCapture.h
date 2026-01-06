@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <memory>
 #include <functional>
@@ -7,22 +7,22 @@
 #include "PacketCaptureIPv4.h"
 #include "PacketCaptureIPv6.h"
 
-// IPv4‚ÆIPv6‚ÌƒpƒPƒbƒgƒLƒƒƒvƒ`ƒƒ‚ğ“‡ŠÇ—‚·‚éƒ‰ƒbƒp[ƒNƒ‰ƒX
+// IPv4ã¨IPv6ã®ãƒ‘ã‚±ãƒƒãƒˆã‚­ãƒ£ãƒ—ãƒãƒ£ã‚’çµ±åˆç®¡ç†ã™ã‚‹ãƒ©ãƒƒãƒ‘ãƒ¼ã‚¯ãƒ©ã‚¹
 class PacketCapture
 {
 public:
     PacketCapture();
     ~PacketCapture();
 
-    // ƒLƒƒƒvƒ`ƒƒ§Œä
+    // ã‚­ãƒ£ãƒ—ãƒãƒ£åˆ¶å¾¡
     bool StartCapture(USHORT targetPort, const std::wstring& targetIP);
     void StopCapture();
     bool IsCapturing() const;
     
-    // ƒR[ƒ‹ƒoƒbƒNİ’è
+    // ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯è¨­å®š
     void SetPacketCallback(std::function<void(const PacketInfo&)> callback);
     
-    // ŒÂ•Ê‚Ì§Œäi•K—v‚É‰‚¶‚Äj
+    // å€‹åˆ¥ã®åˆ¶å¾¡ï¼ˆå¿…è¦ã«å¿œã˜ã¦ï¼‰
     bool StartIPv4Capture(USHORT targetPort, const std::wstring& targetIP);
     bool StartIPv6Capture(USHORT targetPort, const std::wstring& targetIP);
     void StopIPv4Capture();
@@ -31,12 +31,12 @@ public:
     bool IsIPv4Capturing() const;
     bool IsIPv6Capturing() const;
 
-    // IPƒAƒhƒŒƒXw’è‚Å‚ÌƒLƒƒƒvƒ`ƒƒŠJniIPv4‚Ì‚İAIPv6‚Ì‚İA‚Ü‚½‚Í—¼•ûj
+    // IPã‚¢ãƒ‰ãƒ¬ã‚¹æŒ‡å®šã§ã®ã‚­ãƒ£ãƒ—ãƒãƒ£é–‹å§‹ï¼ˆIPv4ã®ã¿ã€IPv6ã®ã¿ã€ã¾ãŸã¯ä¸¡æ–¹ï¼‰
     enum class CaptureMode
     {
-        Both,       // IPv4‚ÆIPv6—¼•û
-        IPv4Only,   // IPv4‚Ì‚İ
-        IPv6Only    // IPv6‚Ì‚İ
+        Both,       // IPv4ã¨IPv6ä¸¡æ–¹
+        IPv4Only,   // IPv4ã®ã¿
+        IPv6Only    // IPv6ã®ã¿
     };
 
     bool IsValidIPAddress(const std::wstring& ip, CaptureMode mode);

@@ -1,11 +1,11 @@
-#pragma once
+ï»¿#pragma once
 
 #include <windows.h>
 
-// ‹¤’ÊƒvƒƒgƒRƒ‹ƒwƒbƒ_[\‘¢‘Ì
+// å…±é€šãƒ—ãƒ­ãƒˆã‚³ãƒ«ãƒ˜ãƒƒãƒ€ãƒ¼æ§‹é€ ä½“
 #pragma pack(push, 1)
 
-// TCPƒwƒbƒ_[ (IPv4/IPv6‹¤’Ê)
+// TCPãƒ˜ãƒƒãƒ€ãƒ¼ (IPv4/IPv6å…±é€š)
 struct TCPHeader
 {
     USHORT sourcePort;
@@ -20,7 +20,7 @@ struct TCPHeader
     USHORT urgentPtr;
 };
 
-// UDPƒwƒbƒ_[ (IPv4/IPv6‹¤’Ê)
+// UDPãƒ˜ãƒƒãƒ€ãƒ¼ (IPv4/IPv6å…±é€š)
 struct UDPHeader
 {
     USHORT sourcePort;
@@ -29,7 +29,7 @@ struct UDPHeader
     USHORT checksum;
 };
 
-// IPv4ƒwƒbƒ_[
+// IPv4ãƒ˜ãƒƒãƒ€ãƒ¼
 struct IPHeader
 {
     BYTE  headerLen : 4;
@@ -45,7 +45,7 @@ struct IPHeader
     DWORD destIP;
 };
 
-// IPv6ƒwƒbƒ_[
+// IPv6ãƒ˜ãƒƒãƒ€ãƒ¼
 struct IPv6Header
 {
     BYTE  trafficClassHigh : 4;

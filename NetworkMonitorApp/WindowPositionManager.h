@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #ifndef WINDOW_POSITION_MANAGER_H
 #define WINDOW_POSITION_MANAGER_H
@@ -9,14 +9,14 @@
 class WindowPositionManager
 {
 public:
-    // ƒEƒBƒ“ƒhƒEˆÊ’u‚ğ•Û‘¶‚·‚é
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ä½ç½®ã‚’ä¿å­˜ã™ã‚‹
     static void SavePosition(HWND hWnd, const std::wstring& registryPath);
     
-    // ƒEƒBƒ“ƒhƒEˆÊ’u‚ğ“Ç‚İ‚Ş
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ä½ç½®ã‚’èª­ã¿è¾¼ã‚€
     static void LoadPosition(HWND hWnd, const std::wstring& registryPath);
 
 private:
-    // ƒEƒBƒ“ƒhƒEˆÊ’u‚ª—LŒø‚©‚Ç‚¤‚©‚ğƒ`ƒFƒbƒN‚·‚é
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ä½ç½®ãŒæœ‰åŠ¹ã‹ã©ã†ã‹ã‚’ãƒã‚§ãƒƒã‚¯ã™ã‚‹
     static bool IsPositionValid(int x, int y, int width, int height);
 };
 

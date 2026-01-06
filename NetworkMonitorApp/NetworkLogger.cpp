@@ -1,9 +1,9 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "NetworkLogger.h"
 #include "LogWindow.h"
 #include <sstream>
 #include <iomanip>
-#include <mutex> // Šù‚ÉƒCƒ“ƒNƒ‹[ƒhÏ‚İ‚Å‚ ‚ê‚Î•s—v
+#include <mutex> // æ—¢ã«ã‚¤ãƒ³ã‚¯ãƒ«ãƒ¼ãƒ‰æ¸ˆã¿ã§ã‚ã‚Œã°ä¸è¦
 
 // Singleton instance getter
 NetworkLogger& NetworkLogger::GetInstance()
@@ -54,7 +54,7 @@ bool NetworkLogger::StartLogging(const std::wstring& filePath)
     
     m_isLogging = true;
     
-    // ƒƒOŠJn‚Ìƒwƒbƒ_[‚ğ‘‚«‚Ş
+    // ãƒ­ã‚°é–‹å§‹ã®ãƒ˜ãƒƒãƒ€ãƒ¼ã‚’æ›¸ãè¾¼ã‚€
     SYSTEMTIME st;
     GetLocalTime(&st);
     
@@ -117,7 +117,7 @@ void NetworkLogger::LogError(const std::wstring& errorMessage, unsigned long err
     LogWindow::GetInstance().AddLogThreadSafe(ss.str());
 }
 
-// int”Å‚ÌLogErrorƒI[ƒo[ƒ[ƒhiPacketCaptureƒNƒ‰ƒX‚©‚ç‚ÌŒÄ‚Ño‚µ—pj
+// intç‰ˆã®LogErrorã‚ªãƒ¼ãƒãƒ¼ãƒ­ãƒ¼ãƒ‰ï¼ˆPacketCaptureã‚¯ãƒ©ã‚¹ã‹ã‚‰ã®å‘¼ã³å‡ºã—ç”¨ï¼‰
 void NetworkLogger::LogError(const std::wstring& errorMessage, int errorCode)
 {
     LogError(errorMessage, static_cast<unsigned long>(errorCode));

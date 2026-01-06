@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "ConfigManager.h"
 #include "AppConstants.h"
 #include <shlobj.h>
@@ -14,13 +14,13 @@ std::wstring ConfigManager::GetConfigFilePath() const
 {
     WCHAR appDataPath[MAX_PATH];
     
-    // ƒ†[ƒU[‚ÌAppDataƒtƒHƒ‹ƒ_‚ğæ“¾
+    // ãƒ¦ãƒ¼ã‚¶ãƒ¼ã®AppDataãƒ•ã‚©ãƒ«ãƒ€ã‚’å–å¾—
     if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appDataPath)))
     {
         std::wstring configPath = appDataPath;
         configPath += L"\\NetworkMonitor";
         
-        // ƒfƒBƒŒƒNƒgƒŠ‚ª‘¶İ‚µ‚È‚¢ê‡‚Íì¬
+        // ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒå­˜åœ¨ã—ãªã„å ´åˆã¯ä½œæˆ
         CreateDirectoryW(configPath.c_str(), nullptr);
         
         configPath += L"\\";
@@ -29,7 +29,7 @@ std::wstring ConfigManager::GetConfigFilePath() const
         return configPath;
     }
     
-    // AppData‚ªæ“¾‚Å‚«‚È‚¢ê‡‚ÍÀsƒtƒ@ƒCƒ‹‚Æ“¯‚¶êŠ
+    // AppDataãŒå–å¾—ã§ããªã„å ´åˆã¯å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«ã¨åŒã˜å ´æ‰€
     WCHAR exePath[MAX_PATH];
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
     std::wstring path = exePath;
@@ -72,7 +72,7 @@ USHORT ConfigManager::LoadLastPort() const
         configPath.c_str()
     );
     
-    // ƒ|[ƒg”Ô†‚Ì‘Ã“–«ƒ`ƒFƒbƒN
+    // ãƒãƒ¼ãƒˆç•ªå·ã®å¦¥å½“æ€§ãƒã‚§ãƒƒã‚¯
     if (port < AppConstants::MIN_PORT || port > AppConstants::MAX_PORT)
     {
         return DEFAULT_PORT;
@@ -85,7 +85,7 @@ bool ConfigManager::SaveLastIPAddress(const std::wstring& ipAddress)
 {
     std::wstring configPath = GetConfigFilePath();
     
-    // ‹ó•¶š—ñ‚Ìê‡‚ÍƒfƒtƒHƒ‹ƒg’l‚ğ•Û‘¶
+    // ç©ºæ–‡å­—åˆ—ã®å ´åˆã¯ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’ä¿å­˜
     const std::wstring& valueToSave = ipAddress.empty() ? DEFAULT_IP : ipAddress;
     
     return WritePrivateProfileStringW(

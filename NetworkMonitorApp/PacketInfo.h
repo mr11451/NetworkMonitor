@@ -1,9 +1,9 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <Windows.h>
 
-// ƒpƒPƒbƒgî•ñ\‘¢‘Ì
+// ãƒ‘ã‚±ãƒƒãƒˆæƒ…å ±æ§‹é€ ä½“
 struct PacketInfo
 {
     std::string sourceIP;

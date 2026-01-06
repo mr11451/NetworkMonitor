@@ -1,31 +1,33 @@
 # NetworkMonitorApp
 
-NetworkMonitorApp�́AWindows�����̃l�b�g���[�N�p�P�b�g�Ď��E��̓c�[���ł��BIPv4/IPv6���Ή��ŁA�w�肵���|�[�g��IP�A�h���X�̒ʐM�����A���^�C���ɃL���v�`�����AGUI��ŉ����E���O�ۑ����\�ł��B
+NetworkMonitorAppは、Windows向けのネットワークパケット監視・解析ツールです。IPv4/IPv6両対応で、指定したポートやIPアドレスの通信をリアルタイムにキャプチャし、GUI上で可視化・ログ保存が可能です。
 
-## ��ȋ@�\
+## 主な機能
 
-- IPv4/IPv6�p�P�b�g�L���v�`���i�w��|�[�g�EIP�A�h���X�Ή��j
-- �p�P�b�g���E��Ԃ̃��A���^�C���\��
-- ���O�E�B���h�E�ɂ�闚���{���E�N���A�E�t�H���_�I�[�v��
-- ���O�ۑ���f�B���N�g���̑I��
-- �E�B���h�E�ʒu�E�ݒ�̎����ۑ�
-- �Ǘ��Ҍ����`�F�b�N�E�G���[���b�Z�[�W�\��
+- IPv4/IPv6パケットキャプチャ（指定ポート・IPアドレス対応）
+- パケット数・状態のリアルタイム表示
+- ログウィンドウによる履歴閲覧・クリア・フォルダオープン
+- ログ保存先ディレクトリの選択
+- ウィンドウ位置・設定の自動保存
+- 管理者権限チェック・エラーメッセージ表示
 
-## �g����
+## 使い方
 
-1. �A�v�����N�����A�Ď��������|�[�g�ԍ���IP�A�h���X�����
-2. �u�Ď��J�n�v�{�^���ŃL���v�`���J�n�^�u�Ď���~�v�ŏI��
-3. ���O�E�B���h�E�ŒʐM�������m�F�E�N���A�E�t�H���_���J��
-4. �ݒ��E�B���h�E�ʒu�͎����ۑ�����܂�
+1. アプリを起動し、監視したいポート番号とIPアドレスを入力
+2. 「監視開始」ボタンでキャプチャ開始／「監視停止」で終了
+3. ログウィンドウで通信履歴を確認・クリア・フォルダを開く
+4. 設定やウィンドウ位置は自動保存されます
 
-## �r���h���@
+## ビルド方法
 
-Visual Studio 2022�ȍ~�� `NetworkMonitorApp.sln` ���J���A�r���h���Ă��������B  
-�p�P�b�g�L���v�`���ɂ͊Ǘ��Ҍ������K�v�ł��B
+Visual Studio 2022以降で `NetworkMonitorApp.sln` を開き、ビルドしてください。  
+パケットキャプチャには管理者権限が必要です。
 
-## ���ӎ���
+## 注意事項
 
-- �{�A�v���͊w�K�E�Ǘ��p�r�����ł��B�s�����p�͂��������������B
-- �ڍׂȎd�l�E�g�����@�̓\�[�X�R�[�h����уR�����g�����Q�Ƃ��������B
+- 本アプリは学習・管理用途向けです。不正利用はご遠慮ください。
+- 詳細な仕様・拡張方法はソースコードおよびコメントをご参照ください。
 
----
+このプロジェクトはMITライセンスの下で公開されています。
+
+※このアプリケーションはCopilot学習目的で作成されたものであり、90%以上のコードが自動生成です

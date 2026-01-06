@@ -1,52 +1,52 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <windows.h>
 
-// IPƒAƒhƒŒƒX‚Ìƒ^ƒCƒv‚ğ•\‚·—ñ‹“Œ^
+// IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®ã‚¿ã‚¤ãƒ—ã‚’è¡¨ã™åˆ—æŒ™å‹
 enum class IPAddressType
 {
-    None,       // ‹ó‚Ü‚½‚Í‘SIP‘ÎÛ
-    IPv4,       // IPv4ƒAƒhƒŒƒX
-    IPv6        // IPv6ƒAƒhƒŒƒX
+    None,       // ç©ºã¾ãŸã¯å…¨IPå¯¾è±¡
+    IPv4,       // IPv4ã‚¢ãƒ‰ãƒ¬ã‚¹
+    IPv6        // IPv6ã‚¢ãƒ‰ãƒ¬ã‚¹
 };
 
 class UIHelper
 {
 public:
-    // ƒŠƒ\[ƒX•¶š—ñ‚Ì“Ç‚İ‚İ
+    // ãƒªã‚½ãƒ¼ã‚¹æ–‡å­—åˆ—ã®èª­ã¿è¾¼ã¿
     static std::wstring LoadStringFromResource(UINT stringID);
     
-    // ƒ|[ƒg”Ô†‚Ìæ“¾‚ÆŒŸØ
+    // ãƒãƒ¼ãƒˆç•ªå·ã®å–å¾—ã¨æ¤œè¨¼
     static USHORT GetPortFromEditControl(HWND hDlg, UINT controlID);
     
-    // ƒ|[ƒg”Ô†‚Ìİ’è
+    // ãƒãƒ¼ãƒˆç•ªå·ã®è¨­å®š
     static void SetPortToEditControl(HWND hDlg, UINT controlID, USHORT port);
     
-    // IPƒAƒhƒŒƒX‚Ìæ“¾‚ÆŒŸØ
+    // IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®å–å¾—ã¨æ¤œè¨¼
     static std::wstring GetIPAddressFromEditControl(HWND hDlg, UINT controlID);
     
-    // IPƒAƒhƒŒƒX‚Ìİ’è
+    // IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®è¨­å®š
     static void SetIPAddressToEditControl(HWND hDlg, UINT controlID, const std::wstring& ipAddress);
     
-    // IPƒAƒhƒŒƒX‚Ì‘Ã“–«ŒŸØ
+    // IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®å¦¥å½“æ€§æ¤œè¨¼
     static bool ValidateIPAddress(const std::wstring& ipAddress);
     
-    // localhost‚ğ127.0.0.1‚É•ÏŠ·i•K—v‚É‰‚¶‚Äj
+    // localhostã‚’127.0.0.1ã«å¤‰æ›ï¼ˆå¿…è¦ã«å¿œã˜ã¦ï¼‰
     static std::wstring ResolveIPAddress(const std::wstring& ipAddress);
     
-    // IPƒAƒhƒŒƒX‚Ìí•Ê‚ğ”»’è
+    // IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®ç¨®åˆ¥ã‚’åˆ¤å®š
     static IPAddressType GetIPAddressType(const std::wstring& ipAddress);
     
-    // ƒXƒe[ƒ^ƒXƒeƒLƒXƒg‚ÌXV
+    // ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ãƒ†ã‚­ã‚¹ãƒˆã®æ›´æ–°
     static void UpdateStatusText(HWND hDlg, UINT controlID, bool isCapturing, int packetCount);
     
-    // Šm”Fƒ_ƒCƒAƒƒO‚Ì•\¦
+    // ç¢ºèªãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã®è¡¨ç¤º
     static bool ShowConfirmDialog(HWND hDlg, UINT messageID, UINT titleID);
     
-    // î•ñƒƒbƒZ[ƒW‚Ì•\¦
+    // æƒ…å ±ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã®è¡¨ç¤º
     static void ShowInfoMessage(HWND hDlg, const std::wstring& message, UINT titleID);
     
-    // ƒGƒ‰[ƒƒbƒZ[ƒW‚Ì•\¦
+    // ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã®è¡¨ç¤º
     static void ShowErrorMessage(HWND hDlg, UINT messageID, UINT titleID);
 
 private:

@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "LogWindow.h"
 #include "resource.h"
 #include "WindowPositionManager.h"
@@ -13,7 +13,7 @@ INT_PTR CALLBACK LogWindow::DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
         pThis = reinterpret_cast<LogWindow*>(lParam);
         SetWindowLongPtr(hDlg, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
 
-        // --- ƒŠƒ\[ƒX‚ÅŠÇ—‚³‚ê‚½ƒRƒ“ƒgƒ[ƒ‹‚Ìƒnƒ“ƒhƒ‹Žæ“¾ ---
+        // --- ãƒªã‚½ãƒ¼ã‚¹ã§ç®¡ç†ã•ã‚ŒãŸã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã®ãƒãƒ³ãƒ‰ãƒ«å–å¾— ---
         pThis->m_hListBox = GetDlgItem(hDlg, IDC_LOG_LISTBOX);
         pThis->m_hWnd = hDlg;
         // ------------------------------------------------------
@@ -45,11 +45,11 @@ INT_PTR CALLBACK LogWindow::DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPAR
             RECT rc;
             GetClientRect(hDlg, &rc);
 
-            // ƒ}[ƒWƒ“‚ð’è‹`
+            // ãƒžãƒ¼ã‚¸ãƒ³ã‚’å®šç¾©
             const int margin = 10;
 			const int boxtop = 40;
 
-            // ƒŠƒXƒgƒ{ƒbƒNƒX‚ðƒEƒBƒ“ƒhƒE‘S‘Ì‚ÉL‚°‚éiƒ}[ƒWƒ“•ª‚¾‚¯“à‘¤‚Éj
+            // ãƒªã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹ã‚’ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦å…¨ä½“ã«åºƒã’ã‚‹ï¼ˆãƒžãƒ¼ã‚¸ãƒ³åˆ†ã ã‘å†…å´ã«ï¼‰
             if (pThis->m_hListBox && IsWindow(pThis->m_hListBox))
             {
                 SetWindowPos(

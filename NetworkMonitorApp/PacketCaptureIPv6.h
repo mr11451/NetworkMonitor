@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <windows.h>
 #include <winsock2.h>
@@ -25,37 +25,37 @@ public:
     void StopCapture();
     bool IsCapturing() const;
 
-    // ’Ç‰Á: IPv6ƒAƒhƒŒƒX‚ª—LŒø‚©‚Âg—p‰Â”\‚©ƒ`ƒFƒbƒN
+    // è¿½åŠ : IPv6ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒæœ‰åŠ¹ã‹ã¤ä½¿ç”¨å¯èƒ½ã‹ãƒã‚§ãƒƒã‚¯
     static bool IsValidUsableIPAddress(const std::wstring& ip);
 
 private:
-    // ‰Šú‰»ŠÖ˜A
+    // åˆæœŸåŒ–é–¢é€£
     bool InitializeWinsock();
     bool InitializeRawSocket(const std::wstring& targetIP);
     bool CreateRawSocket();
     bool GetLocalAddressAndBind(sockaddr_in6& bindAddr);
     bool EnablePromiscuousMode();
     
-    // ƒ\ƒPƒbƒgŠÇ—
+    // ã‚½ã‚±ãƒƒãƒˆç®¡ç†
     void CloseSocket();
     
-    // ƒƒOŠÖ˜A
+    // ãƒ­ã‚°é–¢é€£
     void LogInitializationSuccess(const sockaddr_in6& bindAddr);
     void LogCaptureStarted(USHORT port);
     void LogCaptureStopped();
     
-    // ƒLƒƒƒvƒ`ƒƒƒXƒŒƒbƒh
+    // ã‚­ãƒ£ãƒ—ãƒãƒ£ã‚¹ãƒ¬ãƒƒãƒ‰
     void CaptureThread();
     bool HandleSocketError(int error);
     
-    // ƒpƒPƒbƒg‰ğÍ
+    // ãƒ‘ã‚±ãƒƒãƒˆè§£æ
     bool ParseIPPacket(const BYTE* buffer, DWORD size);
     bool ParseTCPPacket(const BYTE* ipHeader, DWORD ipHeaderLen,
                             const BYTE* tcpData, DWORD tcpDataLen);
     bool ParseUDPPacket(const BYTE* ipHeader, DWORD ipHeaderLen,
                             const BYTE* udpData, DWORD udpDataLen);
     
-    // ƒwƒ‹ƒp[ŠÖ”
+    // ãƒ˜ãƒ«ãƒ‘ãƒ¼é–¢æ•°
     bool IsTargetPort(USHORT srcPort, USHORT dstPort) const;
     void FillPacketInfoIPv6(PacketInfo& info, const IPv6Header* ip,
                             USHORT srcPort, USHORT dstPort, const char* protocol);
@@ -64,7 +64,7 @@ private:
     void NotifyPacket(const PacketInfo& info);
     std::string IPToString(const BYTE* ipAddr);
 
-    // ƒƒ“ƒo[•Ï”
+    // ãƒ¡ãƒ³ãƒãƒ¼å¤‰æ•°
     SOCKET m_socket;
     USHORT m_targetPort;
     std::atomic<bool> m_isCapturing;

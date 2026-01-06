@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "WindowPositionManager.h"
 #include <string>
 
@@ -29,7 +29,7 @@ void WindowPositionManager::SavePosition(HWND hWnd, const std::wstring& registry
     if (result != ERROR_SUCCESS)
         return;
 
-    // LONGŒ^‚Ì’l‚ğDWORDŒ^‚Æ‚µ‚Ä•Û‘¶
+    // LONGå‹ã®å€¤ã‚’DWORDå‹ã¨ã—ã¦ä¿å­˜
     DWORD left = static_cast<DWORD>(wp.rcNormalPosition.left);
     DWORD top = static_cast<DWORD>(wp.rcNormalPosition.top);
     DWORD right = static_cast<DWORD>(wp.rcNormalPosition.right);
@@ -79,13 +79,13 @@ void WindowPositionManager::LoadPosition(HWND hWnd, const std::wstring& registry
     if (!success)
         return;
 
-    // DWORD’l‚ğintŒ^‚É•ÏŠ·
+    // DWORDå€¤ã‚’intå‹ã«å¤‰æ›
     int x = static_cast<int>(left);
     int y = static_cast<int>(top);
     int width = static_cast<int>(right - left);
     int height = static_cast<int>(bottom - top);
 
-    // ˆÊ’u‚ª—LŒø‚©ƒ`ƒFƒbƒNi‚±‚Ìƒƒ\ƒbƒh‚Íprivate‚Å’è‹`‚³‚ê‚Ä‚¢‚é‚Ì‚ÅŒÄ‚Ño‚¹‚Ü‚·j
+    // ä½ç½®ãŒæœ‰åŠ¹ã‹ãƒã‚§ãƒƒã‚¯ï¼ˆã“ã®ãƒ¡ã‚½ãƒƒãƒ‰ã¯privateã§å®šç¾©ã•ã‚Œã¦ã„ã‚‹ã®ã§å‘¼ã³å‡ºã›ã¾ã™ï¼‰
     if (IsPositionValid(x, y, width, height))
     {
         SetWindowPos(hWnd, nullptr, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
@@ -94,13 +94,13 @@ void WindowPositionManager::LoadPosition(HWND hWnd, const std::wstring& registry
 
 bool WindowPositionManager::IsPositionValid(int x, int y, int width, int height)
 {
-    // ƒEƒBƒ“ƒhƒEƒTƒCƒY‚Ì‘Ã“–«ƒ`ƒFƒbƒN
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã®å¦¥å½“æ€§ãƒã‚§ãƒƒã‚¯
     if (width <= 0 || height <= 0)
         return false;
 
     RECT windowRect = { x, y, x + width, y + height };
 
-    // ƒ}ƒ‹ƒ`ƒ‚ƒjƒ^[‘Î‰
+    // ãƒãƒ«ãƒãƒ¢ãƒ‹ã‚¿ãƒ¼å¯¾å¿œ
     HMONITOR hMonitor = MonitorFromRect(&windowRect, MONITOR_DEFAULTTONULL);
 
     if (hMonitor == nullptr)
@@ -119,6 +119,6 @@ bool WindowPositionManager::IsPositionValid(int x, int y, int width, int height)
     int intersectWidth = intersection.right - intersection.left;
     int intersectHeight = intersection.bottom - intersection.top;
 
-    // ƒEƒBƒ“ƒhƒE‚Ì50%ˆÈã‚ªŒ©‚¦‚Ä‚¢‚é‚±‚Æ‚ğŠm”F
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®50%ä»¥ä¸ŠãŒè¦‹ãˆã¦ã„ã‚‹ã“ã¨ã‚’ç¢ºèª
     return (intersectWidth >= width / 2) && (intersectHeight >= height / 2);
 }

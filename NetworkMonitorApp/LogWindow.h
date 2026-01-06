@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <windows.h>
 #include <string>
@@ -14,18 +14,18 @@ public:
         return instance;
     }
 
-    // ƒEƒBƒ“ƒhƒEŠÇ—
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ç®¡ç†
     bool Create(HWND hParent);
     void Show();
     void Hide();
     bool IsVisible() const { return m_isVisible; }
     
-    // ƒƒOŠÇ—
+    // ãƒ­ã‚°ç®¡ç†
     void AddLog(const std::wstring& message);
     void AddLogThreadSafe(const std::wstring& message);
     void Clear();
     
-    // ƒƒOƒtƒ@ƒCƒ‹ƒpƒXŠÇ—
+    // ãƒ­ã‚°ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ç®¡ç†
     void UpdateLogFilePath(const std::wstring& directory);
     std::wstring GetLogFilePath() const;
 
@@ -35,20 +35,20 @@ private:
     LogWindow(const LogWindow&) = delete;
     LogWindow& operator=(const LogWindow&) = delete;
 
-    // ƒEƒBƒ“ƒhƒEƒvƒƒV[ƒWƒƒ - public‚Å‚Í‚È‚­ƒtƒŒƒ“ƒhŠÖ”‚Æ‚µ‚Äˆµ‚¤
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ—ãƒ­ã‚·ãƒ¼ã‚¸ãƒ£ - publicã§ã¯ãªããƒ•ãƒ¬ãƒ³ãƒ‰é–¢æ•°ã¨ã—ã¦æ‰±ã†
     static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
     
-    // “à•”ƒwƒ‹ƒp[
+    // å†…éƒ¨ãƒ˜ãƒ«ãƒ‘ãƒ¼
     std::wstring CreateLogEntry(const std::wstring& message) const;
     void HandleClearButton();
     void HandleOpenFolderButton();
     std::wstring LoadStringFromResource(int stringId) const;
     std::wstring GetRegistryKey() const;
 
-    // ƒJƒXƒ^ƒ€ƒƒbƒZ[ƒW - #define‚É•ÏX
+    // ã‚«ã‚¹ã‚¿ãƒ ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ - #defineã«å¤‰æ›´
     static constexpr size_t MAX_LOG_LINES = 1000;
 
-    // ƒƒ“ƒo[•Ï”
+    // ãƒ¡ãƒ³ãƒãƒ¼å¤‰æ•°
     HWND m_hWnd;
     HWND m_hParent;
     HWND m_hListBox;
@@ -63,9 +63,9 @@ private:
 protected:
     void AddLogInternal(const std::wstring& message);
     
-    // DlgProc‚©‚çƒAƒNƒZƒX‚Å‚«‚é‚æ‚¤ƒtƒŒƒ“ƒhéŒ¾
+    // DlgProcã‹ã‚‰ã‚¢ã‚¯ã‚»ã‚¹ã§ãã‚‹ã‚ˆã†ãƒ•ãƒ¬ãƒ³ãƒ‰å®£è¨€
     friend INT_PTR CALLBACK DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 };
 
-// WM_ADD_LOG‚ğ#defineƒ}ƒNƒ‚Æ‚µ‚Ä’è‹`iconstexpr‚Å‚Íswitch•¶‚Åg‚¦‚È‚¢j
+// WM_ADD_LOGã‚’#defineãƒã‚¯ãƒ­ã¨ã—ã¦å®šç¾©ï¼ˆconstexprã§ã¯switchæ–‡ã§ä½¿ãˆãªã„ï¼‰
 #define WM_ADD_LOG (WM_USER + 100)

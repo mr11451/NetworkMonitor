@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <windows.h>
 #include <winhttp.h>
 #include <string>
@@ -18,7 +18,7 @@ public:
     void LogResponse(DWORD statusCode, const std::string& responseData, DWORD dataSize);
     void LogError(const std::wstring& errorMessage, DWORD errorCode);
     void SetLogFilePath(const std::wstring& filePath);
-    std::wstring GetLogFilePath() const; // ’Ç‰Á: ƒƒOƒtƒ@ƒCƒ‹ƒpƒX‚ğæ“¾
+    std::wstring GetLogFilePath() const; // è¿½åŠ : ãƒ­ã‚°ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‚’å–å¾—
 
     bool StartLogging(const std::wstring& filePath);
     void StopLogging();
@@ -35,11 +35,11 @@ private:
 
     std::wstring GetTimestamp();
     void WriteLog(const std::wstring& message);
-    std::wstring GetDefaultLogDirectory() const; // ’Ç‰Á: ƒfƒtƒHƒ‹ƒg‚ÌƒƒOƒfƒBƒŒƒNƒgƒŠ‚ğæ“¾
+    std::wstring GetDefaultLogDirectory() const; // è¿½åŠ : ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®ãƒ­ã‚°ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’å–å¾—
     std::wstring FormatTimestamp(const SYSTEMTIME& st) const;
 
     std::wstring m_logFilePath;
-    bool m_isLogging; // © ’Ç‰Á: ƒƒOó‘Ô‚ğŠÇ—‚·‚éƒƒ“ƒo[•Ï”
-    mutable std::mutex m_mutex; // constƒƒ“ƒo[ŠÖ”‚Å‚àg—p‚Å‚«‚é‚æ‚¤‚Émutable‰»
+    bool m_isLogging; // â† è¿½åŠ : ãƒ­ã‚°çŠ¶æ…‹ã‚’ç®¡ç†ã™ã‚‹ãƒ¡ãƒ³ãƒãƒ¼å¤‰æ•°
+    mutable std::mutex m_mutex; // constãƒ¡ãƒ³ãƒãƒ¼é–¢æ•°ã§ã‚‚ä½¿ç”¨ã§ãã‚‹ã‚ˆã†ã«mutableåŒ–
     std::wofstream m_logFile;
 };

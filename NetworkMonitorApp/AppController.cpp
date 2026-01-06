@@ -1,4 +1,4 @@
-#include "framework.h"
+Ôªø#include "framework.h"
 #include "AppController.h"
 #include "AppConstants.h"
 #include "UIHelper.h"
@@ -30,7 +30,7 @@ bool AppController::Initialize(HWND hMainDlg)
     m_hMainDlg = hMainDlg;
     m_packetCount = 0;
     
-    // ÉçÉOÉtÉHÉãÉ_ÉpÉXÇì«Ç›çûÇ›
+    // „É≠„Ç∞„Éï„Ç©„É´„ÉÄ„Éë„Çπ„ÇíË™≠„ÅøËæº„Åø
     LoadLogFolderPath();
     
     try
@@ -38,7 +38,7 @@ bool AppController::Initialize(HWND hMainDlg)
         m_pNetworkMonitor = std::make_unique<NetworkMonitor>();
         m_pPacketCapture = std::make_unique<PacketCapture>();
 
-        // ÉpÉPÉbÉgÉLÉÉÉvÉ`ÉÉÇÃÉRÅ[ÉãÉoÉbÉNÇê›íË
+        // „Éë„Ç±„ÉÉ„Éà„Ç≠„É£„Éó„ÉÅ„É£„ÅÆ„Ç≥„Éº„É´„Éê„ÉÉ„ÇØ„ÇíË®≠ÂÆö
         m_pPacketCapture->SetPacketCallback(
             [this](const PacketInfo& packet) {
                 OnPacketCaptured(packet);
@@ -90,10 +90,10 @@ bool AppController::StartCapture(HWND hDlg, USHORT port, const std::wstring& tar
     m_packetCount = 0;
     m_targetIPAddress = targetIP;
     
-    // IPÉAÉhÉåÉXÇï€ë∂
+    // IP„Ç¢„Éâ„É¨„Çπ„Çí‰øùÂ≠ò
     ConfigManager::GetInstance().SaveLastIPAddress(targetIP);
     
-    // ÉoÉCÉiÉäÉçÉOÇ∆ÉeÉLÉXÉgÉçÉOÇóºï˚äJén
+    // „Éê„Ç§„Éä„É™„É≠„Ç∞„Å®„ÉÜ„Ç≠„Çπ„Éà„É≠„Ç∞„Çí‰∏°ÊñπÈñãÂßã
     if (!IsBinaryLogging())
     {
         StartBinaryLogging(hDlg, GetDefaultBinaryLogPath());
@@ -104,7 +104,7 @@ bool AppController::StartCapture(HWND hDlg, USHORT port, const std::wstring& tar
         StartTextLogging(hDlg, GetDefaultTextLogPath());
     }
     
-    // IPÉAÉhÉåÉXÇÃéÌï ÇîªíË
+    // IP„Ç¢„Éâ„É¨„Çπ„ÅÆÁ®ÆÂà•„ÇíÂà§ÂÆö
     IPAddressType ipType = UIHelper::GetIPAddressType(targetIP);
     
     bool captureSuccess = false;
@@ -112,30 +112,30 @@ bool AppController::StartCapture(HWND hDlg, USHORT port, const std::wstring& tar
     switch (ipType)
     {
     case IPAddressType::None:
-        // ãÛÇ‹ÇΩÇÕëSIPëŒè€ Å® IPv4Ç∆IPv6óºï˚ÇãNìÆ
+        // Á©∫„Åæ„Åü„ÅØÂÖ®IPÂØæË±° ‚Üí IPv4„Å®IPv6‰∏°Êñπ„ÇíËµ∑Âãï
         captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, targetIP, PacketCapture::CaptureMode::Both);
         break;
         
     case IPAddressType::IPv4:
-        // IPv4ÉAÉhÉåÉX Å® IPv4ÇÃÇ›ãNìÆ
+        // IPv4„Ç¢„Éâ„É¨„Çπ ‚Üí IPv4„ÅÆ„ÅøËµ∑Âãï
         captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, targetIP, PacketCapture::CaptureMode::IPv4Only);
         break;
         
     case IPAddressType::IPv6:
-        // IPv6ÉAÉhÉåÉX Å® IPv6ÇÃÇ›ãNìÆ
+        // IPv6„Ç¢„Éâ„É¨„Çπ ‚Üí IPv6„ÅÆ„ÅøËµ∑Âãï
         captureSuccess = m_pPacketCapture->StartCaptureWithMode(port, targetIP, PacketCapture::CaptureMode::IPv6Only);
         break;
     }
     
     if (captureSuccess)
     {
-        // É|Å[Égî‘çÜÇï€ë∂
+        // „Éù„Éº„ÉàÁï™Âè∑„Çí‰øùÂ≠ò
         ConfigManager::GetInstance().SaveLastPort(port);
         
         WCHAR msg[AppConstants::MAX_STRING_LENGTH];
         if (targetIP.empty())
         {
-            // IDS_CAPTURE_ALL_IP_IPV4_IPV6 Çégóp
+            // IDS_CAPTURE_ALL_IP_IPV4_IPV6 „Çí‰ΩøÁî®
             std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_CAPTURE_ALL_IP_IPV4_IPV6);
             swprintf_s(msg, AppConstants::MAX_STRING_LENGTH, msgTemplate.c_str(), port);
         }
@@ -151,11 +151,11 @@ bool AppController::StartCapture(HWND hDlg, USHORT port, const std::wstring& tar
                 ipTypeStr = L"IPv6";
                 break;
             default:
-                ipTypeStr = L"ïsñæ";
+                ipTypeStr = L"‰∏çÊòé";
                 break;
             }
             
-            // IDS_CAPTURE_TARGET_IP Çégóp
+            // IDS_CAPTURE_TARGET_IP „Çí‰ΩøÁî®
             std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_CAPTURE_TARGET_IP);
             swprintf_s(msg, AppConstants::MAX_STRING_LENGTH, msgTemplate.c_str(), 
                       port, targetIP.c_str(), ipTypeStr);
@@ -545,7 +545,7 @@ void AppController::SaveLogFolderPath(const std::wstring& path)
 
 void AppController::OnSelectLogFolder(HWND hDlg) 
 {
-    // IDS_LOG_FOLDER_SELECT_TITLE Çégóp
+    // IDS_LOG_FOLDER_SELECT_TITLE „Çí‰ΩøÁî®
     std::wstring title = UIHelper::LoadStringFromResource(IDS_LOG_FOLDER_SELECT_TITLE);
     
     BROWSEINFOW bi = { 0 };
@@ -562,11 +562,11 @@ void AppController::OnSelectLogFolder(HWND hDlg)
             SaveLogFolderPath(selectedPath);
             
             WCHAR message[MAX_PATH + 100];
-            // IDS_LOG_FOLDER_CHANGE_MSG Çégóp
+            // IDS_LOG_FOLDER_CHANGE_MSG „Çí‰ΩøÁî®
             std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_LOG_FOLDER_CHANGE_MSG);
             swprintf_s(message, msgTemplate.c_str(), selectedPath);
             
-            // IDS_LOG_FOLDER_CHANGE_TITLE Çégóp
+            // IDS_LOG_FOLDER_CHANGE_TITLE „Çí‰ΩøÁî®
             std::wstring msgTitle = UIHelper::LoadStringFromResource(IDS_LOG_FOLDER_CHANGE_TITLE);
             MessageBoxW(hDlg, message, msgTitle.c_str(), MB_OK | MB_ICONINFORMATION);
         }
@@ -593,11 +593,11 @@ void AppController::OpenSaveLocation(HWND hDlg)
         else
         {
             WCHAR msg[512];
-            // IDS_ERROR_LOG_FOLDER_NOT_FOUND Çégóp
+            // IDS_ERROR_LOG_FOLDER_NOT_FOUND „Çí‰ΩøÁî®
             std::wstring msgTemplate = UIHelper::LoadStringFromResource(IDS_ERROR_LOG_FOLDER_NOT_FOUND);
             swprintf_s(msg, msgTemplate.c_str(), logDir.c_str());
             
-            // IDS_ERROR_DIR_CREATE_FAILED Çégóp
+            // IDS_ERROR_DIR_CREATE_FAILED „Çí‰ΩøÁî®
             std::wstring msgTitle = UIHelper::LoadStringFromResource(IDS_ERROR_DIR_CREATE_FAILED);
             MessageBoxW(hDlg, msg, msgTitle.c_str(), MB_OK | MB_ICONERROR);
             return;

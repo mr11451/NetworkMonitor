@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #define NOMINMAX
 #include "PacketCaptureIPv6.h"
 #include "NetworkLogger.h"
@@ -7,7 +7,7 @@
 #include "Resource.h"
 #include <ws2tcpip.h>
 
-// ’è”’è‹`
+// å®šæ•°å®šç¾©
 namespace
 {
     constexpr int RECV_BUFFER_SIZE = 65536;     // 64KB
@@ -57,7 +57,7 @@ bool PacketCaptureIPv6::InitializeRawSocket(const std::wstring& targetIP)
     sockaddr_in6 bindAddr = {};
     if (targetIP.empty())
     {
-        // ]—ˆ’Ê‚èƒ[ƒJƒ‹ƒAƒhƒŒƒXæ“¾‚µ‚ÄƒoƒCƒ“ƒh
+        // å¾“æ¥é€šã‚Šãƒ­ãƒ¼ã‚«ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹å–å¾—ã—ã¦ãƒã‚¤ãƒ³ãƒ‰
         if (!GetLocalAddressAndBind(bindAddr))
         {
             return false;
@@ -65,7 +65,7 @@ bool PacketCaptureIPv6::InitializeRawSocket(const std::wstring& targetIP)
     }
     else
     {
-        // IPƒAƒhƒŒƒX‚ª—LŒø‚©‚Âg—p‰Â”\‚©Šm”F
+        // IPã‚¢ãƒ‰ãƒ¬ã‚¹ãŒæœ‰åŠ¹ã‹ã¤ä½¿ç”¨å¯èƒ½ã‹ç¢ºèª
         if (!IsValidUsableIPAddress(targetIP))
         {
             LogWindow::GetInstance().AddLog(L"Invalid IPv6 address specified for binding.");
@@ -458,7 +458,7 @@ bool PacketCaptureIPv6::IsValidUsableIPAddress(const std::wstring& ip)
     if (inet_pton(AF_INET6, ipStr, &(sa6.sin6_addr)) != 1)
         return false;
 
-    // ::/128‚ÍœŠO
+    // ::/128ã¯é™¤å¤–
     static const unsigned char zero[16] = {0};
     if (memcmp(sa6.sin6_addr.s6_addr, zero, 16) == 0)
         return false;

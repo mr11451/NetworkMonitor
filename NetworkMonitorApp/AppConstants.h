@@ -1,23 +1,23 @@
-#pragma once
+ï»¿#pragma once
 
 #include <windows.h>
 
 namespace AppConstants
 {
-    // ƒJƒXƒ^ƒ€ƒƒbƒZ[ƒW
+    // ã‚«ã‚¹ã‚¿ãƒ ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
     constexpr UINT WM_PACKET_CAPTURED = WM_USER + 1;
     
-    // ƒoƒbƒtƒ@ƒTƒCƒY
+    // ãƒãƒƒãƒ•ã‚¡ã‚µã‚¤ã‚º
     constexpr int MAX_STRING_LENGTH = 512;
     
-    // ƒfƒtƒHƒ‹ƒg’l
+    // ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤
     namespace Defaults
     {
         constexpr USHORT PORT = 8080;
         constexpr int MAX_LOG_LINES = 1000;
     }
     
-    // ƒŒƒWƒXƒgƒŠƒL[
+    // ãƒ¬ã‚¸ã‚¹ãƒˆãƒªã‚­ãƒ¼
     namespace Registry
     {
         constexpr const wchar_t* ROOT_KEY = L"Software\\NetworkMonitor";
@@ -25,15 +25,15 @@ namespace AppConstants
         constexpr const wchar_t* LOG_WINDOW = L"Software\\NetworkMonitor\\LogWindow";
     }
     
-    // ƒpƒPƒbƒgƒLƒƒƒvƒ`ƒƒ’è”
+    // ãƒ‘ã‚±ãƒƒãƒˆã‚­ãƒ£ãƒ—ãƒãƒ£å®šæ•°
     namespace Capture
     {
         constexpr int RECV_BUFFER_SIZE = 65536;      // 64KB
         constexpr int SOCKET_BUFFER_SIZE = 262144;   // 256KB
-        constexpr DWORD RECV_TIMEOUT_MS = 5000;      // 5•b
+        constexpr DWORD RECV_TIMEOUT_MS = 5000;      // 5ç§’
     }
 
-    // ƒ|[ƒg”Ô†‚Ì”ÍˆÍ
+    // ãƒãƒ¼ãƒˆç•ªå·ã®ç¯„å›²
     inline constexpr USHORT MIN_PORT = 1;
     inline constexpr USHORT MAX_PORT = 65535;
 }

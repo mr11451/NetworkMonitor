@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "PacketCapture.h"
 #include "NetworkLogger.h"
 #include "LogWindow.h"
@@ -22,7 +22,7 @@ void PacketCapture::SetPacketCallback(std::function<void(const PacketInfo&)> cal
 {
     m_callback = callback;
     
-    // —¼•û‚ÌƒLƒƒƒvƒ`ƒƒƒCƒ“ƒXƒ^ƒ“ƒX‚ÉƒR[ƒ‹ƒoƒbƒN‚ğİ’è
+    // ä¸¡æ–¹ã®ã‚­ãƒ£ãƒ—ãƒãƒ£ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã«ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ã‚’è¨­å®š
     if (m_ipv4Capture)
     {
         m_ipv4Capture->SetPacketCallback(callback);
@@ -36,7 +36,7 @@ void PacketCapture::SetPacketCallback(std::function<void(const PacketInfo&)> cal
 
 bool PacketCapture::StartCapture(USHORT targetPort, const std::wstring& targetIP)
 {
-    // ƒfƒtƒHƒ‹ƒg‚Í—¼•û‹N“®
+    // ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã¯ä¸¡æ–¹èµ·å‹•
     return StartCaptureWithMode(targetPort, targetIP, CaptureMode::Both);
 }
 
@@ -45,7 +45,7 @@ bool PacketCapture::StartCaptureWithMode(USHORT targetPort, const std::wstring& 
     bool ipv4Success = false;
     bool ipv6Success = false;
     
-    // IPv4ƒLƒƒƒvƒ`ƒƒŠJn
+    // IPv4ã‚­ãƒ£ãƒ—ãƒãƒ£é–‹å§‹
     if (mode == CaptureMode::Both || mode == CaptureMode::IPv4Only)
     {
         if (m_ipv4Capture)
@@ -54,7 +54,7 @@ bool PacketCapture::StartCaptureWithMode(USHORT targetPort, const std::wstring& 
         }
     }
     
-    // IPv6ƒLƒƒƒvƒ`ƒƒŠJn
+    // IPv6ã‚­ãƒ£ãƒ—ãƒãƒ£é–‹å§‹
     if (mode == CaptureMode::Both || mode == CaptureMode::IPv6Only)
     {
         if (m_ipv6Capture)
@@ -63,7 +63,7 @@ bool PacketCapture::StartCaptureWithMode(USHORT targetPort, const std::wstring& 
         }
     }
     
-    // ­‚È‚­‚Æ‚à1‚Â‚ª¬Œ÷‚·‚ê‚ÎOK
+    // å°‘ãªãã¨ã‚‚1ã¤ãŒæˆåŠŸã™ã‚Œã°OK
     if (ipv4Success || ipv6Success)
     {
         WCHAR msg[256];
@@ -87,7 +87,7 @@ bool PacketCapture::StartCaptureWithMode(USHORT targetPort, const std::wstring& 
         return true;
     }
     
-    // ‘S‚Ä¸”s
+    // å…¨ã¦å¤±æ•—
     WCHAR errorMsg[256];
     swprintf_s(errorMsg, L"Failed to start packet capture on port %u", targetPort);
     LogWindow::GetInstance().AddLog(errorMsg);
@@ -173,10 +173,10 @@ bool PacketCapture::IsValidIPAddress(const std::wstring& ip, CaptureMode mode)
     switch (mode)
     {
     case CaptureMode::IPv4Only:
-        // IPv4‚Æ‚µ‚Ä—LŒø‚©‚Âg—p‰Â”\
+        // IPv4ã¨ã—ã¦æœ‰åŠ¹ã‹ã¤ä½¿ç”¨å¯èƒ½
         return PacketCaptureIPv4::IsValidUsableIPAddress(ip);
     case CaptureMode::IPv6Only:
-        // IPv6‚Æ‚µ‚Ä—LŒø‚©‚Âg—p‰Â”\
+        // IPv6ã¨ã—ã¦æœ‰åŠ¹ã‹ã¤ä½¿ç”¨å¯èƒ½
         return PacketCaptureIPv6::IsValidUsableIPAddress(ip);
     case CaptureMode::Both:
         if (PacketCaptureIPv4::IsValidUsableIPAddress(ip))

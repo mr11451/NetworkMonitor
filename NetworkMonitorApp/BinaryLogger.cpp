@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "BinaryLogger.h"
 #include <sstream>
 #include <mutex>
@@ -46,13 +46,13 @@ std::wstring BinaryLogger::GeneratePacketFileName(const std::wstring& baseDirect
     std::wostringstream oss;
     oss << baseDirectory;
     
-    // ƒfƒBƒŒƒNƒgƒŠƒpƒX‚ÌÅŒã‚É \ ‚ª‚È‚¢ê‡‚Í’Ç‰Á
+    // ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãƒ‘ã‚¹ã®æœ€å¾Œã« \ ãŒãªã„å ´åˆã¯è¿½åŠ 
     if (!baseDirectory.empty() && baseDirectory.back() != L'\\' && baseDirectory.back() != L'/')
     {
         oss << L"\\";
     }
     
-    // ƒtƒ@ƒCƒ‹–¼: packet_YYYYMMDD_HHMMSS_˜A”Ô.bin
+    // ãƒ•ã‚¡ã‚¤ãƒ«å: packet_YYYYMMDD_HHMMSS_é€£ç•ª.bin
     oss << L"packet_"
         << std::setfill(L'0')
         << std::setw(4) << st.wYear
@@ -78,11 +78,11 @@ bool BinaryLogger::StartLogging(const std::wstring& baseDirectory)
         return false;
     }
     
-    // ƒx[ƒXƒfƒBƒŒƒNƒgƒŠ‚ª‘¶İ‚·‚é‚©Šm”F
+    // ãƒ™ãƒ¼ã‚¹ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒå­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
     DWORD attrib = GetFileAttributesW(baseDirectory.c_str());
     if (attrib == INVALID_FILE_ATTRIBUTES)
     {
-        // ƒfƒBƒŒƒNƒgƒŠ‚ª‘¶İ‚µ‚È‚¢ê‡‚Íì¬
+        // ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒå­˜åœ¨ã—ãªã„å ´åˆã¯ä½œæˆ
         if (!CreateDirectoryW(baseDirectory.c_str(), NULL))
         {
             DWORD error = GetLastError();
@@ -94,7 +94,7 @@ bool BinaryLogger::StartLogging(const std::wstring& baseDirectory)
     }
     else if (!(attrib & FILE_ATTRIBUTE_DIRECTORY))
     {
-        // ƒpƒX‚ªƒfƒBƒŒƒNƒgƒŠ‚Å‚Í‚È‚¢
+        // ãƒ‘ã‚¹ãŒãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã§ã¯ãªã„
         return false;
     }
     
@@ -127,14 +127,14 @@ void BinaryLogger::LogPacket(const PacketInfo& packet)
     
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    // ƒpƒPƒbƒg‚²‚Æ‚ÉˆêˆÓ‚Ìƒtƒ@ƒCƒ‹–¼‚ğ¶¬
+    // ãƒ‘ã‚±ãƒƒãƒˆã”ã¨ã«ä¸€æ„ã®ãƒ•ã‚¡ã‚¤ãƒ«åã‚’ç”Ÿæˆ
     std::wstring packetFilePath = GeneratePacketFileName(m_baseDirectory, m_packetCounter);
     
-    // ƒtƒ@ƒCƒ‹‚ğŠJ‚­
+    // ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã
     std::ofstream logFile(packetFilePath, std::ios::binary | std::ios::out | std::ios::trunc);
     if (!logFile.is_open())
     {
-        // ƒtƒ@ƒCƒ‹‚ªŠJ‚¯‚È‚¢ê‡AƒƒO‚ğ‹L˜^iƒfƒoƒbƒO—pj
+        // ãƒ•ã‚¡ã‚¤ãƒ«ãŒé–‹ã‘ãªã„å ´åˆã€ãƒ­ã‚°ã‚’è¨˜éŒ²ï¼ˆãƒ‡ãƒãƒƒã‚°ç”¨ï¼‰
         WCHAR debugMsg[512];
         swprintf_s(debugMsg, L"Failed to create binary log file: %s", packetFilePath.c_str());
         OutputDebugStringW(debugMsg);
@@ -148,7 +148,7 @@ void BinaryLogger::LogPacket(const PacketInfo& packet)
     entryHeader.sourcePort = packet.sourcePort;
     entryHeader.destPort = packet.destPort;
     
-    // ƒvƒƒgƒRƒ‹‚Ì”»’è
+    // ãƒ—ãƒ­ãƒˆã‚³ãƒ«ã®åˆ¤å®š
     if (packet.protocol == "TCP")
     {
         entryHeader.protocol = 6;
@@ -164,10 +164,10 @@ void BinaryLogger::LogPacket(const PacketInfo& packet)
     
     entryHeader.dataSize = static_cast<UINT32>(packet.data.size());
     
-    // ƒwƒbƒ_[‚Ì‘‚«‚İ
+    // ãƒ˜ãƒƒãƒ€ãƒ¼ã®æ›¸ãè¾¼ã¿
     logFile.write(reinterpret_cast<const char*>(&entryHeader), sizeof(entryHeader));
     
-    // ƒf[ƒ^‚Ì‘‚«‚İ
+    // ãƒ‡ãƒ¼ã‚¿ã®æ›¸ãè¾¼ã¿
     if (entryHeader.dataSize > 0)
     {
         logFile.write(reinterpret_cast<const char*>(packet.data.data()), entryHeader.dataSize);
@@ -182,7 +182,7 @@ void BinaryLogger::LogPacket(const PacketInfo& packet)
         m_totalPackets++;
         m_totalBytes += entryHeader.dataSize;
         
-        // ƒfƒoƒbƒOƒƒOiÅ‰‚Ì”ƒpƒPƒbƒg‚Ì‚İj
+        // ãƒ‡ãƒãƒƒã‚°ãƒ­ã‚°ï¼ˆæœ€åˆã®æ•°ãƒ‘ã‚±ãƒƒãƒˆã®ã¿ï¼‰
         if (m_packetCounter <= 5)
         {
             WCHAR debugMsg[512];

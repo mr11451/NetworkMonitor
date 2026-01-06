@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "NetworkMonitor.h"
 #include "NetworkLogger.h"
 #include "LogWindow.h"
@@ -22,11 +22,11 @@ NetworkMonitor::NetworkMonitor()
     
     if (m_hSession)
     {
-        LogWindow::GetInstance().AddLog(L"WinHTTPƒZƒbƒVƒ‡ƒ“‰Šú‰»¬Œ÷");
+        LogWindow::GetInstance().AddLog(L"WinHTTPã‚»ãƒƒã‚·ãƒ§ãƒ³åˆæœŸåŒ–æˆåŠŸ");
     }
     else
     {
-        LogWindow::GetInstance().AddLog(L"ƒGƒ‰[: WinHTTPƒZƒbƒVƒ‡ƒ“‰Šú‰»¸”s");
+        LogWindow::GetInstance().AddLog(L"ã‚¨ãƒ©ãƒ¼: WinHTTPã‚»ãƒƒã‚·ãƒ§ãƒ³åˆæœŸåŒ–å¤±æ•—");
     }
 }
 
@@ -57,7 +57,7 @@ bool NetworkMonitor::ParseUrl(const std::wstring& url, std::wstring& host,
         return false;
     }
 
-    // hostName‚ªnullI’[‚³‚ê‚Ä‚¢‚é‚±‚Æ‚ğ•ÛØ‚·‚é‚½‚ßAdwHostNameLength‚ğg‚Á‚Ästd::wstring‚ğ\’z
+    // hostNameãŒnullçµ‚ç«¯ã•ã‚Œã¦ã„ã‚‹ã“ã¨ã‚’ä¿è¨¼ã™ã‚‹ãŸã‚ã€dwHostNameLengthã‚’ä½¿ã£ã¦std::wstringã‚’æ§‹ç¯‰
     host.assign(hostName, urlComp.dwHostNameLength);
     path = urlPath;
     port = urlComp.nPort;
@@ -71,7 +71,7 @@ bool NetworkMonitor::SendHttpRequest(const std::wstring& url, const std::wstring
     if (!m_hSession)
     {
         NetworkLogger::GetInstance().LogError(L"Session not initialized", GetLastError());
-        LogWindow::GetInstance().AddLog(L"ƒGƒ‰[: ƒZƒbƒVƒ‡ƒ“‚ª‰Šú‰»‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
+        LogWindow::GetInstance().AddLog(L"ã‚¨ãƒ©ãƒ¼: ã‚»ãƒƒã‚·ãƒ§ãƒ³ãŒåˆæœŸåŒ–ã•ã‚Œã¦ã„ã¾ã›ã‚“");
         return false;
     }
 
@@ -82,7 +82,7 @@ bool NetworkMonitor::SendHttpRequest(const std::wstring& url, const std::wstring
     if (!ParseUrl(url, host, path, port, useHttps))
     {
         NetworkLogger::GetInstance().LogError(L"Failed to parse URL", GetLastError());
-        LogWindow::GetInstance().AddLog(L"ƒGƒ‰[: URL‰ğÍ¸”s");
+        LogWindow::GetInstance().AddLog(L"ã‚¨ãƒ©ãƒ¼: URLè§£æå¤±æ•—");
         return false;
     }
 
@@ -95,7 +95,7 @@ bool NetworkMonitor::SendHttpRequest(const std::wstring& url, const std::wstring
     if (!hConnect)
     {
         NetworkLogger::GetInstance().LogError(L"Failed to connect", GetLastError());
-        LogWindow::GetInstance().AddLog(L"ƒGƒ‰[: Ú‘±¸”s");
+        LogWindow::GetInstance().AddLog(L"ã‚¨ãƒ©ãƒ¼: æ¥ç¶šå¤±æ•—");
         return false;
     }
 
@@ -112,7 +112,7 @@ bool NetworkMonitor::SendHttpRequest(const std::wstring& url, const std::wstring
     if (!hRequest)
     {
         NetworkLogger::GetInstance().LogError(L"Failed to open request", GetLastError());
-        LogWindow::GetInstance().AddLog(L"ƒGƒ‰[: ƒŠƒNƒGƒXƒgƒI[ƒvƒ“¸”s");
+        LogWindow::GetInstance().AddLog(L"ã‚¨ãƒ©ãƒ¼: ãƒªã‚¯ã‚¨ã‚¹ãƒˆã‚ªãƒ¼ãƒ—ãƒ³å¤±æ•—");
         WinHttpCloseHandle(hConnect);
         return false;
     }
@@ -162,13 +162,13 @@ bool NetworkMonitor::SendHttpRequest(const std::wstring& url, const std::wstring
         NetworkLogger::GetInstance().LogResponse(statusCode, m_lastResponse, static_cast<DWORD>(m_lastResponse.size()));
         
         std::wstringstream logMsg;
-        logMsg << L"ƒŒƒXƒ|ƒ“ƒX: " << statusCode << L" (" << m_lastResponse.size() << L" bytes)";
+        logMsg << L"ãƒ¬ã‚¹ãƒãƒ³ã‚¹: " << statusCode << L" (" << m_lastResponse.size() << L" bytes)";
         LogWindow::GetInstance().AddLog(logMsg.str());
     }
     else
     {
         NetworkLogger::GetInstance().LogError(L"Request failed", GetLastError());
-        LogWindow::GetInstance().AddLog(L"ƒGƒ‰[: ƒŠƒNƒGƒXƒg¸”s");
+        LogWindow::GetInstance().AddLog(L"ã‚¨ãƒ©ãƒ¼: ãƒªã‚¯ã‚¨ã‚¹ãƒˆå¤±æ•—");
     }
 
     WinHttpCloseHandle(hRequest);

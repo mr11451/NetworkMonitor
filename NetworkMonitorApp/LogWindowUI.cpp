@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "LogWindow.h"
 #include "resource.h"
 #include "AppController.h"
@@ -12,7 +12,7 @@ bool LogWindow::Create(HWND hParent)
         return true;
     }
 
-    // ƒ_ƒCƒAƒƒOƒŠƒ\[ƒX‚©‚çƒEƒBƒ“ƒhƒE‚ğì¬
+    // ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ãƒªã‚½ãƒ¼ã‚¹ã‹ã‚‰ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’ä½œæˆ
     m_hWnd = CreateDialogParam(
         GetModuleHandle(nullptr),
         MAKEINTRESOURCE(IDD_LOG_WINDOW),
@@ -25,13 +25,13 @@ bool LogWindow::Create(HWND hParent)
         return false;
     }
 
-    // ƒRƒ“ƒgƒ[ƒ‹ƒnƒ“ƒhƒ‹‚ğæ“¾
+    // ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ãƒãƒ³ãƒ‰ãƒ«ã‚’å–å¾—
     m_hClearButton = GetDlgItem(m_hWnd, IDC_LOG_BTN_CLEAR);
     m_hOpenFolderButton = GetDlgItem(m_hWnd, IDC_LOG_BTN_OPEN_FOLDER);
     m_hLogPathLabel = GetDlgItem(m_hWnd, IDC_LOG_STATIC_PATH);
     m_hListBox = GetDlgItem(m_hWnd, IDC_LOG_LISTBOX);
 
-    // ƒŠƒXƒgƒ{ƒbƒNƒX‚ÌƒtƒHƒ“ƒgİ’è
+    // ãƒªã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹ã®ãƒ•ã‚©ãƒ³ãƒˆè¨­å®š
     HFONT hFont = CreateFont(
         16, 0, 0, 0, FW_NORMAL,
         FALSE, FALSE, FALSE,
@@ -47,7 +47,7 @@ bool LogWindow::Create(HWND hParent)
         SendMessage(m_hListBox, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
     
-    // •Û‘¶‚³‚ê‚½ƒEƒBƒ“ƒhƒEˆÊ’u‚ğ“Ç‚İ‚Ş
+    // ä¿å­˜ã•ã‚ŒãŸã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ä½ç½®ã‚’èª­ã¿è¾¼ã‚€
     WindowPositionManager::LoadPosition(m_hWnd, GetRegistryKey());
 
     return true;

@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "LogWindow.h"
 #include "Resource.h"
 
@@ -20,7 +20,7 @@ void LogWindow::AddLogInternal(const std::wstring& message)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    // Å‘åƒƒOs”ƒ`ƒFƒbƒN
+    // æœ€å¤§ãƒ­ã‚°è¡Œæ•°ãƒã‚§ãƒƒã‚¯
     if (m_logs.size() >= MAX_LOG_LINES)
     {
         m_logs.erase(m_logs.begin());
@@ -30,11 +30,11 @@ void LogWindow::AddLogInternal(const std::wstring& message)
         }
     }
 
-    // ƒ^ƒCƒ€ƒXƒ^ƒ“ƒv•t‚«ƒƒOƒGƒ“ƒgƒŠì¬
+    // ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ä»˜ããƒ­ã‚°ã‚¨ãƒ³ãƒˆãƒªä½œæˆ
     std::wstring logEntry = CreateLogEntry(message);
     m_logs.push_back(logEntry);
 
-    // ƒŠƒXƒgƒ{ƒbƒNƒX‚É’Ç‰Á
+    // ãƒªã‚¹ãƒˆãƒœãƒƒã‚¯ã‚¹ã«è¿½åŠ 
     if (m_hListBox && IsWindow(m_hListBox))
     {
         int index = static_cast<int>(SendMessage(m_hListBox, LB_ADDSTRING, 0, 

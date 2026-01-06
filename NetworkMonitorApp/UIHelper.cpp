@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "UIHelper.h"
 #include "AppConstants.h"
 #include "Resource.h"
@@ -18,8 +18,8 @@
 
 extern HINSTANCE hInst;
 
-constexpr auto MAX_PORT_STRING_LENGTH = 6; // 65535 + nullI’[‚Å6•¶š
-constexpr auto MAX_IP_STRING_LENGTH = 46;  // IPv6‚ÌÅ‘å’· + nullI’[
+constexpr auto MAX_PORT_STRING_LENGTH = 6; // 65535 + nullçµ‚ç«¯ã§6æ–‡å­—
+constexpr auto MAX_IP_STRING_LENGTH = 46;  // IPv6ã®æœ€å¤§é•· + nullçµ‚ç«¯
 
 std::wstring UIHelper::LoadStringFromResource(UINT stringID)
 {
@@ -38,7 +38,7 @@ USHORT UIHelper::GetPortFromEditControl(HWND hDlg, UINT controlID)
 
     int port = _wtoi(buffer);
 
-    // ƒ|[ƒg”Ô†‚Ì‘Ã“–«ƒ`ƒFƒbƒN
+    // ãƒãƒ¼ãƒˆç•ªå·ã®å¦¥å½“æ€§ãƒã‚§ãƒƒã‚¯
     if (port < AppConstants::MIN_PORT || port > AppConstants::MAX_PORT)
     {
         ShowErrorMessage(hDlg, IDS_ERROR_PORT_RANGE, IDS_ERROR_TITLE);
@@ -62,24 +62,24 @@ std::wstring UIHelper::GetIPAddressFromEditControl(HWND hDlg, UINT controlID)
     
     std::wstring ipAddress(buffer);
     
-    // ƒgƒŠƒ€i‘OŒã‚Ì‹ó”’‚ğíœj
+    // ãƒˆãƒªãƒ ï¼ˆå‰å¾Œã®ç©ºç™½ã‚’å‰Šé™¤ï¼‰
     size_t start = ipAddress.find_first_not_of(L" \t\r\n");
     size_t end = ipAddress.find_last_not_of(L" \t\r\n");
     
     if (start == std::wstring::npos)
     {
-        return L""; // ‹ó•¶š—ñ‚Ü‚½‚Í‹ó”’‚Ì‚İ
+        return L""; // ç©ºæ–‡å­—åˆ—ã¾ãŸã¯ç©ºç™½ã®ã¿
     }
     
     ipAddress = ipAddress.substr(start, end - start + 1);
     
-    // ‹ó‚Ìê‡‚Í—LŒøi‘SIP‘ÎÛj
+    // ç©ºã®å ´åˆã¯æœ‰åŠ¹ï¼ˆå…¨IPå¯¾è±¡ï¼‰
     if (ipAddress.empty())
     {
         return L"";
     }
     
-    // IPƒAƒhƒŒƒX‚Ì‘Ã“–«‚ğŒŸØ
+    // IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®å¦¥å½“æ€§ã‚’æ¤œè¨¼
     if (!ValidateIPAddress(ipAddress))
     {
         ShowErrorMessage(hDlg, IDS_ERROR_INVALID_IP, IDS_ERROR_TITLE);
@@ -98,32 +98,32 @@ bool UIHelper::ValidateIPAddress(const std::wstring& ipAddress)
 {
     if (ipAddress.empty())
     {
-        return true; // ‹ó•¶š—ñ‚Í—LŒøi‘SIP‘ÎÛj
+        return true; // ç©ºæ–‡å­—åˆ—ã¯æœ‰åŠ¹ï¼ˆå…¨IPå¯¾è±¡ï¼‰
     }
     
-    // ¬•¶š‚É•ÏŠ·‚µ‚Ä”äŠr
+    // å°æ–‡å­—ã«å¤‰æ›ã—ã¦æ¯”è¼ƒ
     std::wstring lowerIP = ipAddress;
     std::transform(lowerIP.begin(), lowerIP.end(), lowerIP.begin(), ::towlower);
     
-    // "localhost" ‚Í—LŒøiƒ‹[ƒvƒoƒbƒNƒAƒhƒŒƒXj
+    // "localhost" ã¯æœ‰åŠ¹ï¼ˆãƒ«ãƒ¼ãƒ—ãƒãƒƒã‚¯ã‚¢ãƒ‰ãƒ¬ã‚¹ï¼‰
     if (lowerIP == L"localhost")
     {
         return true;
     }
     
-    // "127.0.0.1" (IPv4ƒ‹[ƒvƒoƒbƒN) ‚à–¾¦“I‚É‹–‰Â
+    // "127.0.0.1" (IPv4ãƒ«ãƒ¼ãƒ—ãƒãƒƒã‚¯) ã‚‚æ˜ç¤ºçš„ã«è¨±å¯
     if (ipAddress == L"127.0.0.1")
     {
         return true;
     }
     
-    // "::1" (IPv6ƒ‹[ƒvƒoƒbƒN) ‚à–¾¦“I‚É‹–‰Â
+    // "::1" (IPv6ãƒ«ãƒ¼ãƒ—ãƒãƒƒã‚¯) ã‚‚æ˜ç¤ºçš„ã«è¨±å¯
     if (ipAddress == L"::1")
     {
         return true;
     }
     
-    // IPv4‚ÌŒŸØ
+    // IPv4ã®æ¤œè¨¼
     char ipv4Buffer[INET_ADDRSTRLEN];
     int result = WideCharToMultiByte(CP_UTF8, 0, ipAddress.c_str(), -1, 
                                      ipv4Buffer, INET_ADDRSTRLEN, NULL, NULL);
@@ -133,11 +133,11 @@ bool UIHelper::ValidateIPAddress(const std::wstring& ipAddress)
         struct in_addr addr4 {};
         if (inet_pton(AF_INET, ipv4Buffer, &addr4) == 1)
         {
-            return true; // —LŒø‚ÈIPv4ƒAƒhƒŒƒX
+            return true; // æœ‰åŠ¹ãªIPv4ã‚¢ãƒ‰ãƒ¬ã‚¹
         }
     }
     
-    // IPv6‚ÌŒŸØ
+    // IPv6ã®æ¤œè¨¼
     char ipv6Buffer[INET6_ADDRSTRLEN];
     result = WideCharToMultiByte(CP_UTF8, 0, ipAddress.c_str(), -1, 
                                  ipv6Buffer, INET6_ADDRSTRLEN, NULL, NULL);
@@ -147,31 +147,31 @@ bool UIHelper::ValidateIPAddress(const std::wstring& ipAddress)
         struct in6_addr addr6 {};
         if (inet_pton(AF_INET6, ipv6Buffer, &addr6) == 1)
         {
-            return true; // —LŒø‚ÈIPv6ƒAƒhƒŒƒX
+            return true; // æœ‰åŠ¹ãªIPv6ã‚¢ãƒ‰ãƒ¬ã‚¹
         }
     }
     
-    return false; // –³Œø‚ÈIPƒAƒhƒŒƒX
+    return false; // ç„¡åŠ¹ãªIPã‚¢ãƒ‰ãƒ¬ã‚¹
 }
 
 std::wstring UIHelper::ResolveIPAddress(const std::wstring& ipAddress)
 {
     if (ipAddress.empty())
     {
-        return L""; // ‹ó•¶š—ñ‚Í‚»‚Ì‚Ü‚Ü•Ô‚·i‘SIP‘ÎÛj
+        return L""; // ç©ºæ–‡å­—åˆ—ã¯ãã®ã¾ã¾è¿”ã™ï¼ˆå…¨IPå¯¾è±¡ï¼‰
     }
     
-    // ¬•¶š‚É•ÏŠ·‚µ‚Ä”äŠr
+    // å°æ–‡å­—ã«å¤‰æ›ã—ã¦æ¯”è¼ƒ
     std::wstring lowerIP = ipAddress;
     std::transform(lowerIP.begin(), lowerIP.end(), lowerIP.begin(), ::towlower);
     
-    // "localhost" ‚ğ "127.0.0.1" ‚É•ÏŠ·
+    // "localhost" ã‚’ "127.0.0.1" ã«å¤‰æ›
     if (lowerIP == L"localhost")
     {
         return L"127.0.0.1";
     }
     
-    // ‚»‚êˆÈŠO‚Í‚»‚Ì‚Ü‚Ü•Ô‚·
+    // ãã‚Œä»¥å¤–ã¯ãã®ã¾ã¾è¿”ã™
     return ipAddress;
 }
 
@@ -179,20 +179,20 @@ IPAddressType UIHelper::GetIPAddressType(const std::wstring& ipAddress)
 {
     if (ipAddress.empty())
     {
-        return IPAddressType::None; // ‹ó•¶š—ñi‘SIP‘ÎÛj
+        return IPAddressType::None; // ç©ºæ–‡å­—åˆ—ï¼ˆå…¨IPå¯¾è±¡ï¼‰
     }
     
-    // ¬•¶š‚É•ÏŠ·
+    // å°æ–‡å­—ã«å¤‰æ›
     std::wstring lowerIP = ipAddress;
     std::transform(lowerIP.begin(), lowerIP.end(), lowerIP.begin(), ::towlower);
     
-    // "localhost" ‚ÍIPv4‚Æ‚µ‚Äˆµ‚¤i127.0.0.1j
+    // "localhost" ã¯IPv4ã¨ã—ã¦æ‰±ã†ï¼ˆ127.0.0.1ï¼‰
     if (lowerIP == L"localhost")
     {
         return IPAddressType::IPv4;
     }
     
-    // IPv4‚ÌŒŸØ
+    // IPv4ã®æ¤œè¨¼
     char ipv4Buffer[INET_ADDRSTRLEN];
     int result = WideCharToMultiByte(CP_UTF8, 0, ipAddress.c_str(), -1, 
                                      ipv4Buffer, INET_ADDRSTRLEN, NULL, NULL);
@@ -206,7 +206,7 @@ IPAddressType UIHelper::GetIPAddressType(const std::wstring& ipAddress)
         }
     }
     
-    // IPv6‚ÌŒŸØ
+    // IPv6ã®æ¤œè¨¼
     char ipv6Buffer[INET6_ADDRSTRLEN];
     result = WideCharToMultiByte(CP_UTF8, 0, ipAddress.c_str(), -1, 
                                  ipv6Buffer, INET6_ADDRSTRLEN, NULL, NULL);
@@ -227,22 +227,22 @@ void UIHelper::UpdateStatusText(HWND hDlg, UINT controlID, bool isCapturing, int
 {
     std::wstringstream ss;
     
-    // ó‘Ô
-    ss << L"ó‘Ô: " << (isCapturing ? 
+    // çŠ¶æ…‹
+    ss << L"çŠ¶æ…‹: " << (isCapturing ? 
         LoadStringFromResource(IDS_STATUS_RUNNING) : 
         LoadStringFromResource(IDS_STATUS_STOPPED)) << L"\r\n";
     
-    // ƒpƒPƒbƒg”
+    // ãƒ‘ã‚±ãƒƒãƒˆæ•°
     WCHAR packetCountText[AppConstants::MAX_STRING_LENGTH];
     swprintf_s(packetCountText, AppConstants::MAX_STRING_LENGTH,
         LoadStringFromResource(IDS_STATUS_PACKET_COUNT).c_str(),
         packetCount);
     ss << packetCountText << L"\r\n\r\n";
     
-    // g‚¢•û
+    // ä½¿ã„æ–¹
     ss << LoadStringFromResource(IDS_STATUS_USAGE) << L"\r\n\r\n";
     
-    // ŠÇ—ÒŒ ŒÀ‚Ì’ˆÓ
+    // ç®¡ç†è€…æ¨©é™ã®æ³¨æ„
     ss << LoadStringFromResource(IDS_STATUS_ADMIN_REQUIRED);
 
     SetDlgItemTextW(hDlg, controlID, ss.str().c_str());

@@ -1,23 +1,23 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <fstream>
 #include <mutex>
 #include "PacketInfo.h"
 
-// ƒoƒCƒiƒŠƒƒO‚ÌƒpƒPƒbƒgƒGƒ“ƒgƒŠƒwƒbƒ_[
+// ãƒã‚¤ãƒŠãƒªãƒ­ã‚°ã®ãƒ‘ã‚±ãƒƒãƒˆã‚¨ãƒ³ãƒˆãƒªãƒ˜ãƒƒãƒ€ãƒ¼
 #pragma pack(push, 1)
 struct PacketEntryHeader
 {
-    UINT64 timestamp;      // ƒ^ƒCƒ€ƒXƒ^ƒ“ƒviFILETIMEŒ`®j
-    UINT32 sourceIP;       // ‘—MŒ³IPƒAƒhƒŒƒX
-    UINT32 destIP;         // ˆ¶æIPƒAƒhƒŒƒX
-    UINT16 sourcePort;     // ‘—MŒ³ƒ|[ƒg
-    UINT16 destPort;       // ˆ¶æƒ|[ƒg
-    UINT8  protocol;       // ƒvƒƒgƒRƒ‹i6=TCP, 17=UDPj
-    UINT8  reserved1;      // —\–ñiƒAƒ‰ƒCƒƒ“ƒg—pj
-    UINT16 reserved2;      // —\–ñiƒAƒ‰ƒCƒƒ“ƒg—pj
-    UINT32 dataSize;       // ƒf[ƒ^ƒTƒCƒY
+    UINT64 timestamp;      // ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ï¼ˆFILETIMEå½¢å¼ï¼‰
+    UINT32 sourceIP;       // é€ä¿¡å…ƒIPã‚¢ãƒ‰ãƒ¬ã‚¹
+    UINT32 destIP;         // å®›å…ˆIPã‚¢ãƒ‰ãƒ¬ã‚¹
+    UINT16 sourcePort;     // é€ä¿¡å…ƒãƒãƒ¼ãƒˆ
+    UINT16 destPort;       // å®›å…ˆãƒãƒ¼ãƒˆ
+    UINT8  protocol;       // ãƒ—ãƒ­ãƒˆã‚³ãƒ«ï¼ˆ6=TCP, 17=UDPï¼‰
+    UINT8  reserved1;      // äºˆç´„ï¼ˆã‚¢ãƒ©ã‚¤ãƒ¡ãƒ³ãƒˆç”¨ï¼‰
+    UINT16 reserved2;      // äºˆç´„ï¼ˆã‚¢ãƒ©ã‚¤ãƒ¡ãƒ³ãƒˆç”¨ï¼‰
+    UINT32 dataSize;       // ãƒ‡ãƒ¼ã‚¿ã‚µã‚¤ã‚º
 };
 #pragma pack(pop)
 
@@ -34,7 +34,7 @@ public:
     UINT64 GetTotalPackets() const { return m_totalPackets; }
     UINT64 GetTotalBytes() const { return m_totalBytes; }
     
-    // ƒƒOƒtƒ@ƒCƒ‹ƒpƒX‚Ìİ’è‚Ææ“¾
+    // ãƒ­ã‚°ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã®è¨­å®šã¨å–å¾—
     void SetLogFilePath(const std::wstring& filePath);
     std::wstring GetLogFilePath() const;
     std::wstring GetLogDirectory() const;
@@ -51,9 +51,9 @@ private:
     
     bool m_isLogging;
     std::wstring m_baseDirectory;
-    std::wstring m_logFilePath;    // ’Ç‰Á: ƒƒOƒtƒ@ƒCƒ‹ƒpƒX
+    std::wstring m_logFilePath;    // è¿½åŠ : ãƒ­ã‚°ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹
     UINT64 m_totalPackets;
     UINT64 m_totalBytes;
     UINT64 m_packetCounter;
-    mutable std::mutex m_mutex;    // ’Ç‰Á: ƒXƒŒƒbƒhƒZ[ƒt‚Ì‚½‚ß‚Ìƒ~ƒ…[ƒeƒbƒNƒX
+    mutable std::mutex m_mutex;    // è¿½åŠ : ã‚¹ãƒ¬ãƒƒãƒ‰ã‚»ãƒ¼ãƒ•ã®ãŸã‚ã®ãƒŸãƒ¥ãƒ¼ãƒ†ãƒƒã‚¯ã‚¹
 };

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "NetworkMonitor.h"
 #include "PacketCapture.h"
 #include <memory>
@@ -21,7 +21,7 @@ public:
     void StopBinaryLogging();
     bool IsBinaryLogging() const;
     
-    // ƒeƒLƒXƒgƒƒO—pƒƒ\ƒbƒh‚ğ’Ç‰Á
+    // ãƒ†ã‚­ã‚¹ãƒˆãƒ­ã‚°ç”¨ãƒ¡ã‚½ãƒƒãƒ‰ã‚’è¿½åŠ 
     bool StartTextLogging(HWND hDlg, const std::wstring& filePath);
     void StopTextLogging();
     bool IsTextLogging() const;
@@ -39,7 +39,7 @@ public:
     void OnSelectLogFolder(HWND hDlg);
     void OpenSaveLocation(HWND hDlg);
     
-    // ‘ÎÛIPƒAƒhƒŒƒX‚Ìæ“¾
+    // å¯¾è±¡IPã‚¢ãƒ‰ãƒ¬ã‚¹ã®å–å¾—
     std::wstring GetTargetIPAddress() const { return m_targetIPAddress; }
     
 private:
@@ -59,9 +59,9 @@ private:
     std::atomic<UINT64> m_packetCount{0};
     std::wstring m_logDirectory;
     std::wstring m_logFolderPath;
-    std::wstring m_targetIPAddress; // ŠÄ‹‘ÎÛIPƒAƒhƒŒƒX
+    std::wstring m_targetIPAddress; // ç›£è¦–å¯¾è±¡IPã‚¢ãƒ‰ãƒ¬ã‚¹
     
-    // ƒeƒLƒXƒgƒƒO—pƒƒ“ƒo[•Ï”iƒtƒ@ƒCƒ‹ƒXƒgƒŠ[ƒ€‚Ííœj
+    // ãƒ†ã‚­ã‚¹ãƒˆãƒ­ã‚°ç”¨ãƒ¡ãƒ³ãƒãƒ¼å¤‰æ•°ï¼ˆãƒ•ã‚¡ã‚¤ãƒ«ã‚¹ãƒˆãƒªãƒ¼ãƒ ã¯å‰Šé™¤ï¼‰
     std::wstring m_textLogFilePath;
     mutable std::mutex m_textLogMutex;
     bool m_isTextLogging = false;

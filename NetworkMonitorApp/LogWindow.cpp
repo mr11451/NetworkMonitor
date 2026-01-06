@@ -1,4 +1,4 @@
-#include "framework.h"
+ï»¿#include "framework.h"
 #include "LogWindow.h"
 #include "resource.h"
 #include "WindowPositionManager.h"
@@ -6,13 +6,13 @@
 #include <shellapi.h>
 #include <shlobj.h>
 
-// ƒŒƒWƒXƒgƒŠƒL[’è”
+// ãƒ¬ã‚¸ã‚¹ãƒˆãƒªã‚­ãƒ¼å®šæ•°
 namespace
 {
     constexpr const wchar_t* LOG_WINDOW_REGISTRY_KEY = L"Software\\NetworkMonitor\\LogWindow";
 }
 
-// ƒOƒ[ƒoƒ‹ƒwƒ‹ƒp[ŠÖ”
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«ãƒ˜ãƒ«ãƒ‘ãƒ¼é–¢æ•°
 std::wstring LogWindow::LoadStringFromResource(int stringId) const
 {
     WCHAR buffer[512];
@@ -23,13 +23,13 @@ std::wstring LogWindow::LoadStringFromResource(int stringId) const
     return L"";
 }
 
-// ƒŒƒWƒXƒgƒŠƒL[‚Ìæ“¾
+// ãƒ¬ã‚¸ã‚¹ãƒˆãƒªã‚­ãƒ¼ã®å–å¾—
 std::wstring LogWindow::GetRegistryKey() const
 {
     return LOG_WINDOW_REGISTRY_KEY;
 }
 
-// ƒRƒ“ƒXƒgƒ‰ƒNƒ^EƒfƒXƒgƒ‰ƒNƒ^
+// ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ãƒ»ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 LogWindow::LogWindow()
     : m_hWnd(nullptr)
     , m_hParent(nullptr)
