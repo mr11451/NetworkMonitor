@@ -1,396 +1,239 @@
-﻿#include "framework.h"
-#define NOMINMAX
+﻿#include <WinSock2.h>
+#include <windows.h>
+#include "framework.h"
 #include "PacketCaptureIPv4.h"
 #include "NetworkLogger.h"
 #include "LogWindow.h"
 #include "UIHelper.h"
 #include "Resource.h"
-#include <ws2tcpip.h>
+#include <pcap.h>
+#include <thread>
+#include <vector>
+#include <string>
+#include <pcap/pcap.h>
+#include <functional>
+#include "PacketInfo.h"
+#include <ws2def.h>
+#include <corecrt.h>
+#include <cstdlib>
+#include <ws2ipdef.h>
+#include <WS2tcpip.h>
+#include <cstdio>
+#include <system_error>
+#include "ProtocolHeaders.h"
+#include <pcap/bpf.h>
 
-// 定数定義
 namespace
 {
-    constexpr int RECV_BUFFER_SIZE = 65536;     // 64KB
-    constexpr int SOCKET_BUFFER_SIZE = 256 * 1024; // 256KB
-    constexpr DWORD RECV_TIMEOUT_MS = 5000;     // 5秒
+    constexpr int RECV_BUFFER_SIZE = 65536; // 64KB
 }
 
+// コンストラクタ
 PacketCaptureIPv4::PacketCaptureIPv4()
     : m_socket(INVALID_SOCKET)
+    , m_pcapHandle(nullptr)
     , m_targetPort(0)
     , m_isCapturing(false)
 {
-    if (!InitializeWinsock())
-    {
-        LogWindow::GetInstance().AddLog(
-            UIHelper::LoadStringFromResource(IDS_ERROR_WSASTARTUP_FAILED));
-    }
+    // npcapの初期化は不要
 }
 
+// デストラクタ
 PacketCaptureIPv4::~PacketCaptureIPv4()
 {
     StopCapture();
-    WSACleanup();
 }
 
-bool PacketCaptureIPv4::InitializeWinsock()
-{
-    WSADATA wsaData;
-    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (result != 0)
-    {
-        NetworkLogger::GetInstance().LogError(L"WSAStartup failed", result);
-        return false;
-    }
-    return true;
-}
-
+// パケットコールバック設定
 void PacketCaptureIPv4::SetPacketCallback(std::function<void(const PacketInfo&)> callback)
 {
     m_callback = callback;
 }
 
-bool PacketCaptureIPv4::InitializeRawSocket(const std::wstring& targetIP)
+// npcap初期化
+bool PacketCaptureIPv4::InitializePcap(const std::wstring& targetIP)
 {
-    if (!CreateRawSocket())
-    {
+    char errbuf[PCAP_ERRBUF_SIZE] = {0};
+    pcap_if_t* alldevs = nullptr;
+
+    if (pcap_findalldevs(&alldevs, errbuf) == -1) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_FINDALLDEVS_FAILED));
         return false;
     }
 
-    sockaddr_in bindAddr = {};
-    if (targetIP.empty())
-    {
-        // 従来通りローカルアドレス取得してバインド
-        if (!GetLocalAddressAndBind(bindAddr))
-        {
-            return false;
+    // IPv4対応インターフェースを選択
+    pcap_if_t* selected = nullptr;
+    for (pcap_if_t* d = alldevs; d; d = d->next) {
+        for (pcap_addr_t* a = d->addresses; a; a = a->next) {
+            if (a->addr && a->addr->sa_family == AF_INET) {
+                selected = d;
+                break;
+            }
         }
+        if (selected) break;
     }
-    else
-    {
-        // IPアドレスが有効かつ使用可能か確認
-        if (!IsValidUsableIPAddress(targetIP))
-        {
-            LogWindow::GetInstance().AddLog(L"Invalid IPv4 address specified for binding.");
-            CloseSocket();
-            return false;
-        }
-        bindAddr = {};
-        bindAddr.sin_family = AF_INET;
-        bindAddr.sin_port = 0;
+
+    if (!selected) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_NO_IPV4_INTERFACE));
+        pcap_freealldevs(alldevs);
+        return false;
+    }
+
+    m_pcapHandle = pcap_open_live(selected->name, RECV_BUFFER_SIZE, 1, 1000, errbuf);
+    if (!m_pcapHandle) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_OPEN_LIVE_FAILED));
+        pcap_freealldevs(alldevs);
+        return false;
+    }
+
+    // フィルタ設定
+    if (!SetPcapFilter(targetIP)) {
+        pcap_close(m_pcapHandle);
+        m_pcapHandle = nullptr;
+        pcap_freealldevs(alldevs);
+        return false;
+    }
+
+    LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_INITIALIZED_IPV4));
+    pcap_freealldevs(alldevs);
+    return true;
+}
+
+// フィルタ設定
+bool PacketCaptureIPv4::SetPcapFilter(const std::wstring& targetIP)
+{
+    std::string filter;
+    if (!targetIP.empty()) {
         char ipStr[INET_ADDRSTRLEN] = {0};
         size_t converted = 0;
         wcstombs_s(&converted, ipStr, targetIP.c_str(), _TRUNCATE);
-        if (inet_pton(AF_INET, ipStr, &bindAddr.sin_addr) != 1)
-        {
-            LogWindow::GetInstance().AddLog(L"Failed to convert IPv4 address for binding.");
-            CloseSocket();
-            return false;
-        }
-        bool bindSuccess = (bind(m_socket, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) != SOCKET_ERROR);
-        if (!bindSuccess)
-        {
-            int error = WSAGetLastError();
-            NetworkLogger::GetInstance().LogError(L"Failed to bind IPv4 socket to specified address", error);
-            CloseSocket();
-            return false;
-        }
+        filter = "ip and (src host " + std::string(ipStr) + " or dst host " + std::string(ipStr) + ")";
+    } else {
+        filter = "ip";
+    }
+    if (m_targetPort > 0) {
+        filter += " and (tcp port " + std::to_string(m_targetPort) + " or udp port " + std::to_string(m_targetPort) + ")";
     }
 
-    if (!ConfigureSocketOptions())
-    {
+    bpf_program fp;
+    if (pcap_compile(m_pcapHandle, &fp, filter.c_str(), 1, PCAP_NETMASK_UNKNOWN) == -1) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_COMPILE_FAILED));
         return false;
     }
-
-    if (!EnablePromiscuousMode())
-    {
+    if (pcap_setfilter(m_pcapHandle, &fp) == -1) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_SETFILTER_FAILED));
+        pcap_freecode(&fp);
         return false;
     }
-
-    LogInitializationSuccess(bindAddr);
+    pcap_freecode(&fp);
     return true;
 }
 
-bool PacketCaptureIPv4::CreateRawSocket()
-{
-    m_socket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
-    if (m_socket == INVALID_SOCKET)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to create raw socket", error);
-        LogSocketError(IDS_ERROR_RAW_SOCKET_FAILED, error);
-        return false;
-    }
-    return true;
-}
-
-bool PacketCaptureIPv4::GetLocalAddressAndBind(sockaddr_in& bindAddr)
-{
-    char hostname[256];
-    if (gethostname(hostname, sizeof(hostname)) == SOCKET_ERROR)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to get hostname", error);
-        LogWindow::GetInstance().AddLog(
-            UIHelper::LoadStringFromResource(IDS_ERROR_HOSTNAME_FAILED));
-        CloseSocket();
-        return false;
-    }
-
-    struct addrinfo hints = { 0 };
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-
-    struct addrinfo* result = nullptr;
-    if (getaddrinfo(hostname, nullptr, &hints, &result) != 0)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to get address info", error);
-        LogWindow::GetInstance().AddLog(
-            UIHelper::LoadStringFromResource(IDS_ERROR_ADDRINFO_FAILED));
-        CloseSocket();
-        return false;
-    }
-
-    bindAddr = { 0 };
-    bindAddr.sin_family = AF_INET;
-    bindAddr.sin_port = 0;
-    bindAddr.sin_addr = reinterpret_cast<sockaddr_in*>(result->ai_addr)->sin_addr;
-
-    bool bindSuccess = (bind(m_socket, reinterpret_cast<sockaddr*>(&bindAddr), 
-                             sizeof(bindAddr)) != SOCKET_ERROR);
-    
-    if (!bindSuccess)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to bind socket", error);
-        
-        WCHAR msg[512];
-        swprintf_s(msg, 
-            UIHelper::LoadStringFromResource(IDS_ERROR_BIND_FAILED).c_str(), 
-            error);
-        LogWindow::GetInstance().AddLog(msg);
-    }
-
-    freeaddrinfo(result);
-
-    if (!bindSuccess)
-    {
-        CloseSocket();
-        return false;
-    }
-
-    return true;
-}
-
-bool PacketCaptureIPv4::ConfigureSocketOptions()
-{
-    DWORD timeout = RECV_TIMEOUT_MS;
-    if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, 
-                   reinterpret_cast<const char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
-    {
-        NetworkLogger::GetInstance().LogError(L"Failed to set socket timeout", 
-                                             WSAGetLastError());
-    }
-
-    int recvBufferSize = SOCKET_BUFFER_SIZE;
-    if (setsockopt(m_socket, SOL_SOCKET, SO_RCVBUF, 
-                   reinterpret_cast<const char*>(&recvBufferSize), 
-                   sizeof(recvBufferSize)) == SOCKET_ERROR)
-    {
-        NetworkLogger::GetInstance().LogError(L"Failed to set receive buffer size", 
-                                             WSAGetLastError());
-    }
-
-    return true;
-}
-
-bool PacketCaptureIPv4::EnablePromiscuousMode()
-{
-    DWORD flag = RCVALL_ON;
-    if (ioctlsocket(m_socket, SIO_RCVALL, &flag) == SOCKET_ERROR)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to set promiscuous mode", error);
-        LogSocketError(IDS_ERROR_PROMISCUOUS_FAILED, error);
-        CloseSocket();
-        return false;
-    }
-    return true;
-}
-
-void PacketCaptureIPv4::LogSocketError(int resourceId, int errorCode)
-{
-    WCHAR msg[512];
-    swprintf_s(msg, 
-        UIHelper::LoadStringFromResource(resourceId).c_str(), 
-        errorCode);
-    
-    std::wstring fullMsg = msg;
-    if (errorCode == WSAEACCES)
-    {
-        fullMsg += UIHelper::LoadStringFromResource(IDS_ERROR_ADMIN_REQUIRED);
-    }
-    
-    LogWindow::GetInstance().AddLog(fullMsg);
-}
-
-void PacketCaptureIPv4::LogInitializationSuccess(const sockaddr_in& bindAddr)
-{
-    WCHAR msg[512];
-    swprintf_s(msg, 
-        UIHelper::LoadStringFromResource(IDS_RAW_SOCKET_INITIALIZED).c_str(),
-        static_cast<int>(bindAddr.sin_addr.S_un.S_un_b.s_b1),
-        static_cast<int>(bindAddr.sin_addr.S_un.S_un_b.s_b2),
-        static_cast<int>(bindAddr.sin_addr.S_un.S_un_b.s_b3),
-        static_cast<int>(bindAddr.sin_addr.S_un.S_un_b.s_b4));
-    LogWindow::GetInstance().AddLog(msg);
-}
-
-void PacketCaptureIPv4::CloseSocket()
-{
-    if (m_socket != INVALID_SOCKET)
-    {
-        closesocket(m_socket);
-        m_socket = INVALID_SOCKET;
-    }
-}
-
+// キャプチャ開始
 bool PacketCaptureIPv4::StartCapture(USHORT targetPort, const std::wstring& targetIP)
 {
-    if (m_isCapturing)
-    {
+    if (m_isCapturing) {
         NetworkLogger::GetInstance().LogError(L"Already capturing", 0);
-        LogWindow::GetInstance().AddLog(
-            UIHelper::LoadStringFromResource(IDS_ALREADY_CAPTURING));
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_ALREADY_CAPTURING));
         return false;
     }
 
     m_targetPort = targetPort;
 
-    if (!InitializeRawSocket(targetIP))
-    {
+    if (!InitializePcap(targetIP)) {
         return false;
     }
 
     m_isCapturing = true;
     m_captureThread = std::thread(&PacketCaptureIPv4::CaptureThread, this);
 
-    LogCaptureStarted(targetPort);
+    std::wstring msg = UIHelper::LoadStringFromResource(IDS_CAPTURE_STARTED_IPV4);
+    LogWindow::GetInstance().AddLog(msg);
+    NetworkLogger::GetInstance().LogRequest(msg, L"CAPTURE_IPv4");
     return true;
 }
 
+// キャプチャ停止
 void PacketCaptureIPv4::StopCapture()
 {
-    if (!m_isCapturing)
-    {
+    // すでに停止中なら何もしない
+    if (!m_isCapturing && !m_captureThread.joinable()) {
         return;
     }
 
+    // キャプチャフラグを下ろす
     m_isCapturing = false;
-    CloseSocket();
 
-    if (m_captureThread.joinable())
-    {
-        m_captureThread.join();
+    // pcap_loopを中断（スレッド内でpcap_loopがブロックしている場合も安全に抜ける）
+    if (m_pcapHandle) {
+        pcap_breakloop(m_pcapHandle);
     }
 
-    LogCaptureStopped();
+    // スレッドがjoinableなら必ずjoin
+    if (m_captureThread.joinable()) {
+        try {
+            m_captureThread.join();
+        } catch (const std::system_error&) {
+            // join失敗時も例外で落ちないように
+        }
+    }
+
+    // pcapハンドルのクローズ
+    if (m_pcapHandle) {
+        pcap_close(m_pcapHandle);
+        m_pcapHandle = nullptr;
+    }
+
+    NetworkLogger::GetInstance().LogRequest(UIHelper::LoadStringFromResource(IDS_CAPTURE_STOPPED_IPV4), L"CAPTURE_IPv4");
+    LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_CAPTURE_STOPPED_IPV4));
 }
 
+// キャプチャ中か判定
 bool PacketCaptureIPv4::IsCapturing() const
 {
     return m_isCapturing;
 }
 
-void PacketCaptureIPv4::LogCaptureStarted(USHORT port)
-{
-    WCHAR msg[256];
-    swprintf_s(msg, 
-        UIHelper::LoadStringFromResource(IDS_CAPTURE_STARTED).c_str(), 
-        port);
-    NetworkLogger::GetInstance().LogRequest(msg, L"CAPTURE_IPv4");
-    LogWindow::GetInstance().AddLog(msg);
-}
-
-void PacketCaptureIPv4::LogCaptureStopped()
-{
-    NetworkLogger::GetInstance().LogRequest(L"Stopped IPv4 capturing", L"CAPTURE_IPv4");
-    LogWindow::GetInstance().AddLog(L"IPv4 " + 
-        UIHelper::LoadStringFromResource(IDS_CAPTURE_STOPPED));
-}
-
+// キャプチャスレッド
 void PacketCaptureIPv4::CaptureThread()
 {
-    std::vector<BYTE> buffer(RECV_BUFFER_SIZE);
-    DWORD packetCount = 0;
-
-    LogCaptureThreadStarted();
-
-    while (m_isCapturing)
-    {
-        int bytesReceived = recv(m_socket, 
-                                reinterpret_cast<char*>(buffer.data()), 
-                                RECV_BUFFER_SIZE, 0);
-        
-        if (bytesReceived > 0)
-        {
-            packetCount++;
-            ParseIPPacket(buffer.data(), bytesReceived);
-        }
-        else if (bytesReceived == 0)
-        {
-            break;
-        }
-        else if (!HandleSocketError(WSAGetLastError()))
-        {
-            break;
-        }
-    }
-
-    LogCaptureThreadEnded(packetCount);
-}
-
-bool PacketCaptureIPv4::HandleSocketError(int error)
-{
-    if (error == WSAETIMEDOUT)
-    {
-        return true;
-    }
-    
-    if (error == WSAENOTSOCK || error == WSAEINTR || !m_isCapturing)
-    {
-        return false;
-    }
-    
-    NetworkLogger::GetInstance().LogError(L"Socket error during IPv4 capture", error);
-    
-    WCHAR errMsg[256];
-    swprintf_s(errMsg, 
-        UIHelper::LoadStringFromResource(IDS_SOCKET_ERROR).c_str(), 
-        error);
-    LogWindow::GetInstance().AddLogThreadSafe(errMsg);
-    
-    return false;
-}
-
-void PacketCaptureIPv4::LogCaptureThreadStarted()
-{
     WCHAR msg[256];
-    swprintf_s(msg, L"IPv4 capture thread started on port %u", m_targetPort);
+    swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_STARTED).c_str(), m_targetPort);
+    LogWindow::GetInstance().AddLogThreadSafe(msg);
+
+    // staticメンバー関数として渡す
+    int res = pcap_loop(
+        m_pcapHandle,
+        0,
+        [](u_char* param, const pcap_pkthdr* header, const u_char* pkt_data) {
+            // paramはthisポインタ
+            static_cast<PacketCaptureIPv4*>(reinterpret_cast<void*>(param))->PacketHandler(param, header, pkt_data);
+        },
+        reinterpret_cast<u_char*>(this));
+
+    swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_ENDED).c_str(), res);
     LogWindow::GetInstance().AddLogThreadSafe(msg);
 }
 
-void PacketCaptureIPv4::LogCaptureThreadEnded(DWORD packetCount)
+// staticメンバー関数として定義
+void PacketCaptureIPv4::PacketHandler(u_char* param, const pcap_pkthdr* header, const u_char* pkt_data)
 {
-    WCHAR msg[256];
-    swprintf_s(msg, L"IPv4 capture thread ended. Packets captured: %u", packetCount);
-    LogWindow::GetInstance().AddLogThreadSafe(msg);
+    auto* self = reinterpret_cast<PacketCaptureIPv4*>(param);
+    if (!self->m_isCapturing) return;
+
+    // Ethernetヘッダをスキップ
+    const int ETHERNET_HEADER_SIZE = 14;
+    if (header->caplen <= ETHERNET_HEADER_SIZE) return;
+
+    const BYTE* ipPacket = pkt_data + ETHERNET_HEADER_SIZE;
+    DWORD ipPacketLen = header->caplen - ETHERNET_HEADER_SIZE;
+
+    self->ParseIPPacket(ipPacket, ipPacketLen);
 }
 
 std::string PacketCaptureIPv4::IPToString(DWORD ip)
 {
-    struct in_addr addr;
+    struct in_addr addr {};
     addr.S_un.S_addr = ip;
     char str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &addr, str, INET_ADDRSTRLEN);
@@ -492,8 +335,8 @@ bool PacketCaptureIPv4::IsTargetPort(USHORT srcPort, USHORT dstPort) const
     return (srcPort == m_targetPort || dstPort == m_targetPort);
 }
 
-void PacketCaptureIPv4::FillPacketInfo(PacketInfo& info, const IPHeader* ip, 
-                                       USHORT srcPort, USHORT dstPort, 
+void PacketCaptureIPv4::FillPacketInfo(PacketInfo& info, const IPHeader* ip,
+                                       USHORT srcPort, USHORT dstPort,
                                        const char* protocol)
 {
     info.sourceIP = IPToString(ip->sourceIP);

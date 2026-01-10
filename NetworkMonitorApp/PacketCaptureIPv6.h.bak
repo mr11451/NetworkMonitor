@@ -1,0 +1,82 @@
+﻿#pragma once
+
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <mstcpip.h>
+#include <string>
+#include <vector>
+#include <thread>
+#include <atomic>
+#include <functional>
+#include "PacketInfo.h"
+#include "ProtocolHeaders.h"
+#include <pcap/pcap.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
+class PacketCaptureIPv6
+{
+public:
+    PacketCaptureIPv6();
+    ~PacketCaptureIPv6();
+
+    void SetPacketCallback(std::function<void(const PacketInfo&)> callback);
+    bool InitializePcap(const std::wstring& targetIP);
+    bool StartCapture(USHORT targetPort, const std::wstring& targetIP);
+    void StopCapture();
+    bool IsCapturing() const;
+
+    // 追加: IPv6アドレスが有効かつ使用可能かチェック
+    static bool IsValidUsableIPAddress(const std::wstring& ip);
+
+private:
+    // 初期化関連
+    bool InitializeWinsock();
+    bool InitializeRawSocket(const std::wstring& targetIP);
+    bool CreateRawSocket();
+    bool GetLocalAddressAndBind(sockaddr_in6& bindAddr);
+    bool EnablePromiscuousMode();
+    
+    // ソケット管理
+    void CloseSocket();
+    
+    // ログ関連
+    void LogInitializationSuccess(const sockaddr_in6& bindAddr);
+    void LogCaptureStarted(USHORT port);
+    void LogCaptureStopped();
+    
+    // キャプチャスレッド
+    void CaptureThread();
+    void PacketHandler(u_char* param, const pcap_pkthdr* header, const u_char* pkt_data);
+    bool HandleSocketError(int error);
+    
+    // パケット解析
+    bool ParseIPPacket(const BYTE* buffer, DWORD size);
+    bool ParseTCPPacket(const BYTE* ipHeader, DWORD ipHeaderLen,
+                            const BYTE* tcpData, DWORD tcpDataLen);
+    bool ParseUDPPacket(const BYTE* ipHeader, DWORD ipHeaderLen,
+                            const BYTE* udpData, DWORD udpDataLen);
+    
+    // ヘルパー関数
+    bool IsTargetPort(USHORT srcPort, USHORT dstPort) const;
+    void FillPacketInfoIPv6(PacketInfo& info, const IPv6Header* ip,
+                            USHORT srcPort, USHORT dstPort, const char* protocol);
+    void ExtractPayload(PacketInfo& info, const BYTE* data, 
+                       DWORD headerLen, DWORD totalLen);
+    void NotifyPacket(const PacketInfo& info);
+    std::string IPToString(const BYTE* ipAddr);
+
+    // メンバー変数
+    SOCKET m_socket;
+    USHORT m_targetPort;
+    std::atomic<bool> m_isCapturing;
+    std::thread m_captureThread;
+    std::function<void(const PacketInfo&)> m_callback;
+
+    // 追加: npcap用ハンドル
+    pcap_t* m_pcapHandle = nullptr;
+
+    // ... 既存のメンバー宣言の中に追加 ...
+    bool SetPcapFilter(const std::wstring& targetIP);
+};

@@ -2,15 +2,13 @@
 
 #include <windows.h>
 #include <winsock2.h>
-#include <ws2tcpip.h>
-#include <mstcpip.h>
 #include <string>
-#include <vector>
 #include <thread>
 #include <atomic>
 #include <functional>
 #include "PacketInfo.h"
 #include "ProtocolHeaders.h"
+#include <pcap/pcap.h>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -21,6 +19,7 @@ public:
     ~PacketCaptureIPv6();
 
     void SetPacketCallback(std::function<void(const PacketInfo&)> callback);
+    bool InitializePcap(const std::wstring& targetIP);
     bool StartCapture(USHORT targetPort, const std::wstring& targetIP);
     void StopCapture();
     bool IsCapturing() const;
@@ -28,24 +27,13 @@ public:
     // 追加: IPv6アドレスが有効かつ使用可能かチェック
     static bool IsValidUsableIPAddress(const std::wstring& ip);
 
+    // 追加: npcapフィルタ設定
+    bool SetPcapFilter(const std::wstring& targetIP);
+
 private:
-    // 初期化関連
-    bool InitializeWinsock();
-    bool InitializeRawSocket(const std::wstring& targetIP);
-    bool CreateRawSocket();
-    bool GetLocalAddressAndBind(sockaddr_in6& bindAddr);
-    bool EnablePromiscuousMode();
-    
-    // ソケット管理
-    void CloseSocket();
-    
-    // ログ関連
-    void LogInitializationSuccess(const sockaddr_in6& bindAddr);
-    void LogCaptureStarted(USHORT port);
-    void LogCaptureStopped();
-    
     // キャプチャスレッド
     void CaptureThread();
+    void PacketHandler(u_char* param, const pcap_pkthdr* header, const u_char* pkt_data);
     bool HandleSocketError(int error);
     
     // パケット解析
@@ -70,4 +58,7 @@ private:
     std::atomic<bool> m_isCapturing;
     std::thread m_captureThread;
     std::function<void(const PacketInfo&)> m_callback;
+
+    // 追加: npcap用ハンドル
+    pcap_t* m_pcapHandle = nullptr;
 };

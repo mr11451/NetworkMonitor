@@ -254,6 +254,21 @@ BEGIN
     IDS_CAPTURE_THREAD_ENDED "キャプチャスレッド終了 (受信パケット数: %d)"
 END
 
+STRINGTABLE
+BEGIN
+    IDS_PCAP_FINDALLDEVS_FAILED   "ネットワークインターフェースの列挙に失敗しました。"
+    IDS_PCAP_NO_IPV4_INTERFACE    "IPv4インターフェースが見つかりません。"
+    IDS_PCAP_OPEN_LIVE_FAILED     "パケットキャプチャデバイスのオープンに失敗しました。"
+    IDS_PCAP_COMPILE_FAILED       "パケットキャプチャフィルタのコンパイルに失敗しました。"
+    IDS_PCAP_SETFILTER_FAILED     "パケットキャプチャフィルタの設定に失敗しました。"
+    IDS_PCAP_INITIALIZED_IPV4     "npcapがIPv4用に初期化されました。"
+    IDS_PCAP_INITIALIZED_IPV6     "npcapがIPv6用に初期化されました。"
+    IDS_CAPTURE_STARTED_IPV4      "IPv4キャプチャを開始しました。"
+    IDS_CAPTURE_STARTED_IPV6      "IPv6キャプチャを開始しました。"
+    IDS_CAPTURE_STOPPED_IPV4      "IPv4キャプチャを停止しました。"
+    IDS_CAPTURE_STOPPED_IPV6      "IPv6キャプチャを停止しました。"
+END
+
 #endif    // 日本語 (日本) resources
 /////////////////////////////////////////////////////////////////////////////
 

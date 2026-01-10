@@ -1,315 +1,236 @@
-﻿#include "framework.h"
-#define NOMINMAX
+﻿#include <WinSock2.h>
+#include <windows.h>
 #include "PacketCaptureIPv6.h"
 #include "NetworkLogger.h"
 #include "LogWindow.h"
 #include "UIHelper.h"
 #include "Resource.h"
 #include <ws2tcpip.h>
+#include <thread>
+#include <vector>
+#include <string>
+#include <system_error>
+#include <functional>
+#include "PacketInfo.h"
+#include <pcap/pcap.h>
+#include <ws2def.h>
+#include <ws2ipdef.h>
+#include <corecrt.h>
+#include <cstdlib>
+#include "ProtocolHeaders.h"
+#include <in6addr.h>
+#include <cstdio>
+#include <pcap/bpf.h>
+#include <string.h>
+#include <string.h>
 
-// 定数定義
 namespace
 {
-    constexpr int RECV_BUFFER_SIZE = 65536;     // 64KB
+    constexpr int RECV_BUFFER_SIZE = 65536; // 64KB
 }
 
+// コンストラクタ
 PacketCaptureIPv6::PacketCaptureIPv6()
     : m_socket(INVALID_SOCKET)
+    , m_pcapHandle(nullptr)
     , m_targetPort(0)
     , m_isCapturing(false)
 {
-    if (!InitializeWinsock())
-    {
-        LogWindow::GetInstance().AddLog(L"Failed to initialize Winsock for IPv6");
-    }
+    // npcapの初期化は不要
 }
 
+// デストラクタ
 PacketCaptureIPv6::~PacketCaptureIPv6()
 {
     StopCapture();
-    WSACleanup();
 }
 
-bool PacketCaptureIPv6::InitializeWinsock()
-{
-    WSADATA wsaData;
-    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (result != 0)
-    {
-        NetworkLogger::GetInstance().LogError(L"WSAStartup failed for IPv6", result);
-        return false;
-    }
-    return true;
-}
-
+// パケットコールバック設定
 void PacketCaptureIPv6::SetPacketCallback(std::function<void(const PacketInfo&)> callback)
 {
     m_callback = callback;
 }
 
-bool PacketCaptureIPv6::InitializeRawSocket(const std::wstring& targetIP)
+// npcap初期化
+bool PacketCaptureIPv6::InitializePcap(const std::wstring& targetIP)
 {
-    if (!CreateRawSocket())
-    {
+    char errbuf[PCAP_ERRBUF_SIZE] = {0};
+    pcap_if_t* alldevs = nullptr;
+
+    if (pcap_findalldevs(&alldevs, errbuf) == -1) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_FINDALLDEVS_FAILED));
         return false;
     }
 
-    sockaddr_in6 bindAddr = {};
-    if (targetIP.empty())
-    {
-        // 従来通りローカルアドレス取得してバインド
-        if (!GetLocalAddressAndBind(bindAddr))
-        {
-            return false;
+    // IPv6対応インターフェースを選択
+    pcap_if_t* selected = nullptr;
+    for (pcap_if_t* d = alldevs; d; d = d->next) {
+        for (pcap_addr_t* a = d->addresses; a; a = a->next) {
+            if (a->addr && a->addr->sa_family == AF_INET6) {
+                selected = d;
+                break;
+            }
         }
+        if (selected) break;
     }
-    else
-    {
-        // IPアドレスが有効かつ使用可能か確認
-        if (!IsValidUsableIPAddress(targetIP))
-        {
-            LogWindow::GetInstance().AddLog(L"Invalid IPv6 address specified for binding.");
-            CloseSocket();
-            return false;
-        }
-        bindAddr = {};
-        bindAddr.sin6_family = AF_INET6;
-        bindAddr.sin6_port = 0;
+
+    if (!selected) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_NO_IPV6_INTERFACE));
+        pcap_freealldevs(alldevs);
+        return false;
+    }
+
+    m_pcapHandle = pcap_open_live(selected->name, RECV_BUFFER_SIZE, 1, 1000, errbuf);
+    if (!m_pcapHandle) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_OPEN_LIVE_FAILED));
+        pcap_freealldevs(alldevs);
+        return false;
+    }
+
+    // フィルタ設定
+    if (!SetPcapFilter(targetIP)) {
+        pcap_close(m_pcapHandle);
+        m_pcapHandle = nullptr;
+        pcap_freealldevs(alldevs);
+        return false;
+    }
+
+    LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_INITIALIZED_IPV6));
+    pcap_freealldevs(alldevs);
+    return true;
+}
+
+// フィルタ設定
+bool PacketCaptureIPv6::SetPcapFilter(const std::wstring& targetIP)
+{
+    std::string filter;
+    if (!targetIP.empty()) {
         char ipStr[INET6_ADDRSTRLEN] = {0};
         size_t converted = 0;
         wcstombs_s(&converted, ipStr, targetIP.c_str(), _TRUNCATE);
-        if (inet_pton(AF_INET6, ipStr, &bindAddr.sin6_addr) != 1)
-        {
-            LogWindow::GetInstance().AddLog(L"Failed to convert IPv6 address for binding.");
-            CloseSocket();
-            return false;
-        }
-        bool bindSuccess = (bind(m_socket, reinterpret_cast<sockaddr*>(&bindAddr), sizeof(bindAddr)) != SOCKET_ERROR);
-        if (!bindSuccess)
-        {
-            int error = WSAGetLastError();
-            NetworkLogger::GetInstance().LogError(L"Failed to bind IPv6 socket to specified address", error);
-            CloseSocket();
-            return false;
-        }
+        filter = "ip6 and (src host " + std::string(ipStr) + " or dst host " + std::string(ipStr) + ")";
+    } else {
+        filter = "ip6";
+    }
+    if (m_targetPort > 0) {
+        filter += " and (tcp port " + std::to_string(m_targetPort) + " or udp port " + std::to_string(m_targetPort) + ")";
     }
 
-    if (!EnablePromiscuousMode())
-    {
+    bpf_program fp;
+    if (pcap_compile(m_pcapHandle, &fp, filter.c_str(), 1, PCAP_NETMASK_UNKNOWN) == -1) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_COMPILE_FAILED));
         return false;
     }
-
-    LogInitializationSuccess(bindAddr);
+    if (pcap_setfilter(m_pcapHandle, &fp) == -1) {
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_PCAP_SETFILTER_FAILED));
+        pcap_freecode(&fp);
+        return false;
+    }
+    pcap_freecode(&fp);
     return true;
 }
 
-bool PacketCaptureIPv6::CreateRawSocket()
-{
-    m_socket = socket(AF_INET6, SOCK_RAW, IPPROTO_IPV6);
-    if (m_socket == INVALID_SOCKET)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to create IPv6 raw socket", error);
-        return false;
-    }
-    return true;
-}
-
-bool PacketCaptureIPv6::GetLocalAddressAndBind(sockaddr_in6& bindAddr)
-{
-    char hostname[256];
-    if (gethostname(hostname, sizeof(hostname)) == SOCKET_ERROR)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to get hostname for IPv6", error);
-        CloseSocket();
-        return false;
-    }
-
-    struct addrinfo hints = { 0 };
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_STREAM;
-
-    struct addrinfo* result = nullptr;
-    if (getaddrinfo(hostname, nullptr, &hints, &result) != 0)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to get IPv6 address info", error);
-        CloseSocket();
-        return false;
-    }
-
-    bindAddr = { 0 };
-    bindAddr.sin6_family = AF_INET6;
-    bindAddr.sin6_port = 0;
-    memcpy(&bindAddr.sin6_addr, 
-           &reinterpret_cast<sockaddr_in6*>(result->ai_addr)->sin6_addr,
-           sizeof(bindAddr.sin6_addr));
-
-    bool bindSuccess = (bind(m_socket, reinterpret_cast<sockaddr*>(&bindAddr), 
-                             sizeof(bindAddr)) != SOCKET_ERROR);
-    
-    if (!bindSuccess)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to bind IPv6 socket", error);
-    }
-
-    freeaddrinfo(result);
-
-    if (!bindSuccess)
-    {
-        CloseSocket();
-        return false;
-    }
-
-    return true;
-}
-
-bool PacketCaptureIPv6::EnablePromiscuousMode()
-{
-    DWORD flag = RCVALL_ON;
-    if (ioctlsocket(m_socket, SIO_RCVALL, &flag) == SOCKET_ERROR)
-    {
-        int error = WSAGetLastError();
-        NetworkLogger::GetInstance().LogError(L"Failed to set IPv6 promiscuous mode", error);
-        CloseSocket();
-        return false;
-    }
-    return true;
-}
-
-void PacketCaptureIPv6::LogInitializationSuccess(const sockaddr_in6& bindAddr)
-{
-    char ipv6Str[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, &bindAddr.sin6_addr, ipv6Str, INET6_ADDRSTRLEN);
-    
-    WCHAR msg[512];
-    swprintf_s(msg, L"IPv6 Raw socket initialized on %S", ipv6Str);
-    LogWindow::GetInstance().AddLog(msg);
-}
-
-void PacketCaptureIPv6::CloseSocket()
-{
-    if (m_socket != INVALID_SOCKET)
-    {
-        closesocket(m_socket);
-        m_socket = INVALID_SOCKET;
-    }
-}
-
+// キャプチャ開始
 bool PacketCaptureIPv6::StartCapture(USHORT targetPort, const std::wstring& targetIP)
 {
-    if (m_isCapturing)
-    {
-        NetworkLogger::GetInstance().LogError(L"Already capturing IPv6", 0);
+    if (m_isCapturing) {
+        NetworkLogger::GetInstance().LogError(L"Already capturing", 0);
+        LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_ALREADY_CAPTURING));
         return false;
     }
 
     m_targetPort = targetPort;
 
-    if (!InitializeRawSocket(targetIP))
-    {
+    if (!InitializePcap(targetIP)) {
         return false;
     }
 
     m_isCapturing = true;
     m_captureThread = std::thread(&PacketCaptureIPv6::CaptureThread, this);
 
-    LogCaptureStarted(targetPort);
+    WCHAR msg[256];
+    swprintf_s(msg, L"IPv6 capture started (npcap) on port %u", targetPort);
+    NetworkLogger::GetInstance().LogRequest(msg, L"CAPTURE_IPv6");
+    LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_CAPTURE_STARTED_IPV6));
     return true;
 }
 
+// キャプチャ停止
 void PacketCaptureIPv6::StopCapture()
 {
-    if (!m_isCapturing)
-    {
+    // すでに停止中なら何もしない
+    if (!m_isCapturing && !m_captureThread.joinable()) {
         return;
     }
 
+    // キャプチャフラグを下ろす
     m_isCapturing = false;
-    CloseSocket();
 
-    if (m_captureThread.joinable())
-    {
-        m_captureThread.join();
+    // pcap_loopを中断（スレッド内でpcap_loopがブロックしている場合も安全に抜ける）
+    if (m_pcapHandle) {
+        pcap_breakloop(m_pcapHandle);
     }
 
-    LogCaptureStopped();
+    // スレッドがjoinableなら必ずjoin
+    if (m_captureThread.joinable()) {
+        try {
+            m_captureThread.join();
+        } catch (const std::system_error&) {
+            // join失敗時も例外で落ちないように
+        }
+    }
+
+    // pcapハンドルのクローズ
+    if (m_pcapHandle) {
+        pcap_close(m_pcapHandle);
+        m_pcapHandle = nullptr;
+    }
+
+    NetworkLogger::GetInstance().LogRequest(UIHelper::LoadStringFromResource(IDS_CAPTURE_STOPPED_IPV6), L"CAPTURE_IPv6");
+    LogWindow::GetInstance().AddLog(UIHelper::LoadStringFromResource(IDS_CAPTURE_STOPPED_IPV6));
 }
 
+// キャプチャ中か判定
 bool PacketCaptureIPv6::IsCapturing() const
 {
     return m_isCapturing;
 }
 
-void PacketCaptureIPv6::LogCaptureStarted(USHORT port)
-{
-    WCHAR msg[256];
-    swprintf_s(msg, L"IPv6 capture started on port %u", port);
-    NetworkLogger::GetInstance().LogRequest(msg, L"CAPTURE_IPv6");
-    LogWindow::GetInstance().AddLog(msg);
-}
-
-void PacketCaptureIPv6::LogCaptureStopped()
-{
-    NetworkLogger::GetInstance().LogRequest(L"Stopped IPv6 capturing", L"CAPTURE_IPv6");
-    LogWindow::GetInstance().AddLog(L"IPv6 capture stopped");
-}
-
+// キャプチャスレッド
 void PacketCaptureIPv6::CaptureThread()
 {
-    std::vector<BYTE> buffer(RECV_BUFFER_SIZE);
-    DWORD packetCount = 0;
-
     WCHAR msg[256];
-    swprintf_s(msg, L"IPv6 capture thread started on port %u", m_targetPort);
+    swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_STARTED).c_str(), m_targetPort);
     LogWindow::GetInstance().AddLogThreadSafe(msg);
 
-    while (m_isCapturing)
-    {
-        int bytesReceived = recv(m_socket, 
-                                reinterpret_cast<char*>(buffer.data()), 
-                                RECV_BUFFER_SIZE, 0);
-        
-        if (bytesReceived > 0)
-        {
-            packetCount++;
-            ParseIPPacket(buffer.data(), bytesReceived);
-        }
-        else if (bytesReceived == 0)
-        {
-            break;
-        }
-        else if (!HandleSocketError(WSAGetLastError()))
-        {
-            break;
-        }
-    }
+    // staticメンバー関数として渡す
+    int res = pcap_loop(
+        m_pcapHandle,
+        0,
+        [](u_char* param, const pcap_pkthdr* header, const u_char* pkt_data) {
+            // paramはthisポインタ
+            static_cast<PacketCaptureIPv6*>(reinterpret_cast<void*>(param))->PacketHandler(param, header, pkt_data);
+        },
+        reinterpret_cast<u_char*>(this));
 
-    swprintf_s(msg, L"IPv6 capture thread ended. Packets captured: %u", packetCount);
+    swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_ENDED).c_str(), res);
     LogWindow::GetInstance().AddLogThreadSafe(msg);
 }
 
-bool PacketCaptureIPv6::HandleSocketError(int error)
+// staticメンバー関数として定義
+void PacketCaptureIPv6::PacketHandler(u_char* param, const pcap_pkthdr* header, const u_char* pkt_data)
 {
-    if (error == WSAETIMEDOUT)
-    {
-        return true;
-    }
-    
-    if (error == WSAENOTSOCK || error == WSAEINTR || !m_isCapturing)
-    {
-        return false;
-    }
-    
-    NetworkLogger::GetInstance().LogError(L"Socket error during IPv6 capture", error);
-    
-    WCHAR errMsg[256];
-    swprintf_s(errMsg, L"IPv6 Socket error: %d", error);
-    LogWindow::GetInstance().AddLogThreadSafe(errMsg);
-    
-    return false;
+    auto* self = reinterpret_cast<PacketCaptureIPv6*>(param);
+    if (!self->m_isCapturing) return;
+
+    // Ethernetヘッダをスキップ
+    const int ETHERNET_HEADER_SIZE = 14;
+    if (header->caplen <= ETHERNET_HEADER_SIZE) return;
+
+    const BYTE* ipv6Packet = pkt_data + ETHERNET_HEADER_SIZE;
+    DWORD ipv6PacketLen = header->caplen - ETHERNET_HEADER_SIZE;
+
+    self->ParseIPPacket(ipv6Packet, ipv6PacketLen);
 }
 
 std::string PacketCaptureIPv6::IPToString(const BYTE* ipAddr)
@@ -343,7 +264,7 @@ bool PacketCaptureIPv6::ParseIPPacket(const BYTE* buffer, DWORD size)
 }
 
 bool PacketCaptureIPv6::ParseTCPPacket(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
-                                           const BYTE* tcpData, DWORD tcpDataLen)
+                                       const BYTE* tcpData, DWORD tcpDataLen)
 {
     if (tcpDataLen < sizeof(TCPHeader))
     {
@@ -374,7 +295,7 @@ bool PacketCaptureIPv6::ParseTCPPacket(const BYTE* ipv6Header, DWORD ipv6HeaderL
 }
 
 bool PacketCaptureIPv6::ParseUDPPacket(const BYTE* ipv6Header, DWORD ipv6HeaderLen,
-                                           const BYTE* udpData, DWORD udpDataLen)
+                                       const BYTE* udpData, DWORD udpDataLen)
 {
     if (udpDataLen < sizeof(UDPHeader))
     {
@@ -409,8 +330,8 @@ bool PacketCaptureIPv6::IsTargetPort(USHORT srcPort, USHORT dstPort) const
 }
 
 void PacketCaptureIPv6::FillPacketInfoIPv6(PacketInfo& info, const IPv6Header* ip,
-                                           USHORT srcPort, USHORT dstPort,
-                                           const char* protocol)
+                                       USHORT srcPort, USHORT dstPort,
+                                       const char* protocol)
 {
     info.sourceIP = IPToString(ip->sourceIP);
     info.destIP = IPToString(ip->destIP);
