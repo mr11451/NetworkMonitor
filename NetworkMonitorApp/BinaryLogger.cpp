@@ -140,7 +140,7 @@ void BinaryLogger::LogPacket(const PacketInfo& packet)
     {
         // ファイルが開けない場合、ログを記録（デバッグ用）
         WCHAR debugMsg[512];
-        swprintf_s(debugMsg, L"Failed to create binary log file: %s", packetFilePath.c_str());
+        swprintf_s(debugMsg, L"Failed to create binary log file: %s\n", packetFilePath.c_str());
         OutputDebugStringW(debugMsg);
         return;
     }
@@ -190,7 +190,7 @@ void BinaryLogger::LogPacket(const PacketInfo& packet)
         if (m_packetCounter <= 5)
         {
             WCHAR debugMsg[512];
-            swprintf_s(debugMsg, L"Binary log created: %s (Packet #%llu)", 
+            swprintf_s(debugMsg, L"Binary log created: %s (Packet #%llu)\n", 
                       packetFilePath.c_str(), m_packetCounter);
             OutputDebugStringW(debugMsg);
         }
