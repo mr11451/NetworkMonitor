@@ -53,7 +53,6 @@ private:
     std::string IPToString(const BYTE* ipAddr);
 
     // メンバー変数
-    SOCKET m_socket;
     USHORT m_targetPort;
     std::atomic<bool> m_isCapturing;
     std::thread m_captureThread;

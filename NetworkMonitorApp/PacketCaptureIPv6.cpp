@@ -23,6 +23,7 @@
 #include <pcap/bpf.h>
 #include <string.h>
 #include <string.h>
+#include <pcap/dlt.h>
 
 namespace
 {
@@ -31,8 +32,7 @@ namespace
 
 // コンストラクタ
 PacketCaptureIPv6::PacketCaptureIPv6()
-    : m_socket(INVALID_SOCKET)
-    , m_pcapHandle(nullptr)
+    : m_pcapHandle(nullptr)
     , m_targetPort(0)
     , m_isCapturing(false)
 {
@@ -64,14 +64,36 @@ bool PacketCaptureIPv6::InitializePcap(const std::wstring& targetIP)
 
     // IPv6対応インターフェースを選択
     pcap_if_t* selected = nullptr;
-    for (pcap_if_t* d = alldevs; d; d = d->next) {
-        for (pcap_addr_t* a = d->addresses; a; a = a->next) {
-            if (a->addr && a->addr->sa_family == AF_INET6) {
-                selected = d;
-                break;
+    if (!targetIP.empty()) {
+        // targetIPが指定されている場合、そのIPを持つインターフェースのみ選択
+        char ipStr[INET6_ADDRSTRLEN] = {0};
+        size_t converted = 0;
+        wcstombs_s(&converted, ipStr, targetIP.c_str(), _TRUNCATE);
+        for (pcap_if_t* d = alldevs; d; d = d->next) {
+            for (pcap_addr_t* a = d->addresses; a; a = a->next) {
+                if (a->addr && a->addr->sa_family == AF_INET6) {
+                    sockaddr_in6* sin6 = reinterpret_cast<sockaddr_in6*>(a->addr);
+                    char devIpStr[INET6_ADDRSTRLEN] = {0};
+                    inet_ntop(AF_INET6, &(sin6->sin6_addr), devIpStr, INET6_ADDRSTRLEN);
+                    if (strcmp(ipStr, devIpStr) == 0) {
+                        selected = d;
+                        break;
+                    }
+                }
             }
+            if (selected) break;
         }
-        if (selected) break;
+    } else {
+        // IP指定なしの場合は最初のIPv6インターフェース
+        for (pcap_if_t* d = alldevs; d; d = d->next) {
+            for (pcap_addr_t* a = d->addresses; a; a = a->next) {
+                if (a->addr && a->addr->sa_family == AF_INET6) {
+                    selected = d;
+                    break;
+                }
+            }
+            if (selected) break;
+        }
     }
 
     if (!selected) {
@@ -203,15 +225,17 @@ void PacketCaptureIPv6::CaptureThread()
     swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_STARTED).c_str(), m_targetPort);
     LogWindow::GetInstance().AddLogThreadSafe(msg);
 
-    // staticメンバー関数として渡す
+    // 修正: pcap_loopのコールバックでparamにthisを渡し、ラムダ内で安全にPacketHandlerを呼び出す
     int res = pcap_loop(
         m_pcapHandle,
         0,
         [](u_char* param, const pcap_pkthdr* header, const u_char* pkt_data) {
-            // paramはthisポインタ
-            static_cast<PacketCaptureIPv6*>(reinterpret_cast<void*>(param))->PacketHandler(param, header, pkt_data);
+            auto* self = reinterpret_cast<PacketCaptureIPv6*>(param);
+            if (self) {
+                self->PacketHandler(param, header, pkt_data);
+            }
         },
-        reinterpret_cast<u_char*>(this));
+        reinterpret_cast<u_char*>(this)); // paramにthisを渡す
 
     swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_ENDED).c_str(), res);
     LogWindow::GetInstance().AddLogThreadSafe(msg);
@@ -223,12 +247,20 @@ void PacketCaptureIPv6::PacketHandler(u_char* param, const pcap_pkthdr* header, 
     auto* self = reinterpret_cast<PacketCaptureIPv6*>(param);
     if (!self->m_isCapturing) return;
 
-    // Ethernetヘッダをスキップ
-    const int ETHERNET_HEADER_SIZE = 14;
-    if (header->caplen <= ETHERNET_HEADER_SIZE) return;
+    // データリンク層ヘッダサイズを判定（Ethernet:14, ループバック:4）
+    int l2HeaderSize = sizeof(eth_header);
+    int datalink = pcap_datalink(self->m_pcapHandle);
+    if (datalink == DLT_NULL) {
+        l2HeaderSize = 4;
+    } else if (datalink == DLT_EN10MB) {
+        l2HeaderSize = 14;
+    }
+    // 必要に応じて他のDLTも追加
 
-    const BYTE* ipv6Packet = pkt_data + ETHERNET_HEADER_SIZE;
-    DWORD ipv6PacketLen = header->caplen - ETHERNET_HEADER_SIZE;
+    if (header->caplen <= static_cast<unsigned int>(l2HeaderSize)) return;
+
+    const BYTE* ipv6Packet = pkt_data + l2HeaderSize;
+    DWORD ipv6PacketLen = header->caplen - l2HeaderSize;
 
     self->ParseIPPacket(ipv6Packet, ipv6PacketLen);
 }

@@ -22,6 +22,8 @@
 #include <system_error>
 #include "ProtocolHeaders.h"
 #include <pcap/bpf.h>
+#include <string.h>
+#include <pcap/dlt.h>
 
 namespace
 {
@@ -30,8 +32,7 @@ namespace
 
 // コンストラクタ
 PacketCaptureIPv4::PacketCaptureIPv4()
-    : m_socket(INVALID_SOCKET)
-    , m_pcapHandle(nullptr)
+    : m_pcapHandle(nullptr)
     , m_targetPort(0)
     , m_isCapturing(false)
 {
@@ -63,14 +64,36 @@ bool PacketCaptureIPv4::InitializePcap(const std::wstring& targetIP)
 
     // IPv4対応インターフェースを選択
     pcap_if_t* selected = nullptr;
-    for (pcap_if_t* d = alldevs; d; d = d->next) {
-        for (pcap_addr_t* a = d->addresses; a; a = a->next) {
-            if (a->addr && a->addr->sa_family == AF_INET) {
-                selected = d;
-                break;
+    if (!targetIP.empty()) {
+        // targetIPが指定されている場合、そのIPを持つインターフェースのみ選択
+        char ipStr[INET_ADDRSTRLEN] = {0};
+        size_t converted = 0;
+        wcstombs_s(&converted, ipStr, targetIP.c_str(), _TRUNCATE);
+        for (pcap_if_t* d = alldevs; d; d = d->next) {
+            for (pcap_addr_t* a = d->addresses; a; a = a->next) {
+                if (a->addr && a->addr->sa_family == AF_INET) {
+                    sockaddr_in* sin = reinterpret_cast<sockaddr_in*>(a->addr);
+                    char devIpStr[INET_ADDRSTRLEN] = {0};
+                    inet_ntop(AF_INET, &(sin->sin_addr), devIpStr, INET_ADDRSTRLEN);
+                    if (strcmp(ipStr, devIpStr) == 0) {
+                        selected = d;
+                        break;
+                    }
+                }
             }
+            if (selected) break;
         }
-        if (selected) break;
+    } else {
+        // IP指定なしの場合は最初のIPv4インターフェース
+        for (pcap_if_t* d = alldevs; d; d = d->next) {
+            for (pcap_addr_t* a = d->addresses; a; a = a->next) {
+                if (a->addr && a->addr->sa_family == AF_INET) {
+                    selected = d;
+                    break;
+                }
+            }
+            if (selected) break;
+        }
     }
 
     if (!selected) {
@@ -201,15 +224,18 @@ void PacketCaptureIPv4::CaptureThread()
     swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_STARTED).c_str(), m_targetPort);
     LogWindow::GetInstance().AddLogThreadSafe(msg);
 
-    // staticメンバー関数として渡す
+    // 修正: pcap_loopのコールバックでparamにthisを渡す
     int res = pcap_loop(
         m_pcapHandle,
         0,
         [](u_char* param, const pcap_pkthdr* header, const u_char* pkt_data) {
             // paramはthisポインタ
-            static_cast<PacketCaptureIPv4*>(reinterpret_cast<void*>(param))->PacketHandler(param, header, pkt_data);
+            auto* self = reinterpret_cast<PacketCaptureIPv4*>(param);
+            if (self) {
+                self->PacketHandler(param, header, pkt_data);
+            }
         },
-        reinterpret_cast<u_char*>(this));
+        reinterpret_cast<u_char*>(this)); // paramにthisを渡す
 
     swprintf_s(msg, UIHelper::LoadStringFromResource(IDS_CAPTURE_THREAD_ENDED).c_str(), res);
     LogWindow::GetInstance().AddLogThreadSafe(msg);
@@ -221,14 +247,49 @@ void PacketCaptureIPv4::PacketHandler(u_char* param, const pcap_pkthdr* header, 
     auto* self = reinterpret_cast<PacketCaptureIPv4*>(param);
     if (!self->m_isCapturing) return;
 
-    // Ethernetヘッダをスキップ
-    const int ETHERNET_HEADER_SIZE = 14;
-    if (header->caplen <= ETHERNET_HEADER_SIZE) return;
+    // デフォルトはEthernetヘッダ(14バイト)をスキップ
+    int l2HeaderSize = sizeof(eth_header);
 
-    const BYTE* ipPacket = pkt_data + ETHERNET_HEADER_SIZE;
-    DWORD ipPacketLen = header->caplen - ETHERNET_HEADER_SIZE;
+    // ループバックインターフェースの場合はヘッダサイズが異なる
+    // WindowsのNpcapループバックはEthernetヘッダなしで4バイトのAFフィールドのみ
+    // Linuxのloは通常14バイトのダミーEthernetヘッダ
+    // ここではAFフィールド(4バイト)を考慮
+    // pcap_datalinkでDLT_NULL(=0)なら4バイト、DLT_EN10MB(=1)なら14バイト
+    int datalink = pcap_datalink(self->m_pcapHandle);
+    if (datalink == DLT_NULL) {
+        l2HeaderSize = 4;
+    } else if (datalink == DLT_EN10MB) {
+        l2HeaderSize = 14;
+    } // 他の型は必要に応じて追加
 
-    self->ParseIPPacket(ipPacket, ipPacketLen);
+    if (header->caplen <= static_cast<unsigned int>(l2HeaderSize)) return;
+
+    const BYTE* ipPacket = pkt_data + l2HeaderSize;
+    DWORD ipPacketLen = header->caplen - l2HeaderSize;
+
+    // IPヘッダ長チェック
+    if (ipPacketLen < sizeof(IPHeader)) return;
+
+    const IPHeader* ipHeader = reinterpret_cast<const IPHeader*>(ipPacket);
+    DWORD ipHeaderLen = ipHeader->headerLen * 4;
+    if (ipHeaderLen < 20 || ipHeaderLen > ipPacketLen) return;
+
+    const BYTE* l4Header = ipPacket + ipHeaderLen;
+    DWORD l4Len = ipPacketLen - ipHeaderLen;
+
+    switch (ipHeader->protocol)
+    {
+    case 6: // TCP
+        if (l4Len < sizeof(TCPHeader)) return;
+        self->ParseTCPPacket(ipPacket, ipHeaderLen, l4Header, l4Len);
+        break;
+    case 17: // UDP
+        if (l4Len < sizeof(UDPHeader)) return;
+        self->ParseUDPPacket(ipPacket, ipHeaderLen, l4Header, l4Len);
+        break;
+    default:
+        break;
+    }
 }
 
 std::string PacketCaptureIPv4::IPToString(DWORD ip)

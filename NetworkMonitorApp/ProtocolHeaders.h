@@ -5,6 +5,13 @@
 // 共通プロトコルヘッダー構造体
 #pragma pack(push, 1)
 
+// Ethernetヘッダ
+struct eth_header {
+    BYTE dest[6];
+    BYTE src[6];
+    USHORT type;
+};
+
 // TCPヘッダー (IPv4/IPv6共通)
 struct TCPHeader
 {
