@@ -38,7 +38,7 @@ public:
     
     void OnSelectLogFolder(HWND hDlg);
     void OpenSaveLocation(HWND hDlg);
-    
+
     // 対象IPアドレスの取得
     std::wstring GetTargetIPAddress() const { return m_targetIPAddress; }
     
@@ -51,7 +51,7 @@ private:
     void OnPacketCaptured(const PacketInfo& packet);
     
     std::wstring GenerateUniqueLogFileName(const std::wstring& directory) const;
-    void WriteTextLog(const std::wstring& logText);
+    void WriteTextLog(const SYSTEMTIME& timestamp, const std::wstring& logText);
 
     std::unique_ptr<NetworkMonitor> m_pNetworkMonitor;
     std::unique_ptr<PacketCapture> m_pPacketCapture;

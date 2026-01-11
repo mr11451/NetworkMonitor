@@ -23,6 +23,7 @@ public:
     // ログ管理
     void AddLog(const std::wstring& message);
     void AddLogThreadSafe(const std::wstring& message);
+    void AddLogThreadSafe(const SYSTEMTIME& timestamp, const std::wstring& message);
     void Clear();
     
     // ログファイルパス管理

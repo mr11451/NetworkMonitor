@@ -1,10 +1,30 @@
 ﻿#include "framework.h"
 #include "LogWindow.h"
 #include "Resource.h"
+#include <sstream>
+#include <iomanip> // 追加：std::setwを使うために必要
 
 void LogWindow::AddLog(const std::wstring& message)
 {
     AddLogInternal(message);
+}
+
+void LogWindow::AddLogThreadSafe(const SYSTEMTIME& timestamp, const std::wstring& message)
+{
+    if (m_hWnd && IsWindow(m_hWnd))
+    {
+        std::wostringstream oss;
+        oss << L"["
+            << std::setw(2) << std::setfill(L'0') << timestamp.wHour
+            << std::setw(2) << std::setfill(L'0') << timestamp.wMinute
+            << std::setw(2) << std::setfill(L'0') << timestamp.wSecond
+            << L"."
+            << std::setw(3) << std::setfill(L'0') << timestamp.wMilliseconds
+			<< L"] "
+            << message;
+        std::wstring* pMessage = new std::wstring(oss.str());
+        PostMessage(m_hWnd, WM_ADD_LOG, 0, reinterpret_cast<LPARAM>(pMessage));
+    }
 }
 
 void LogWindow::AddLogThreadSafe(const std::wstring& message)

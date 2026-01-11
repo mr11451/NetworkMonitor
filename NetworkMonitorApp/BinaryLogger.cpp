@@ -3,6 +3,11 @@
 #include <sstream>
 #include <mutex>
 #include <iomanip>
+#include <string>
+#include <Windows.h>
+#include "PacketInfo.h"
+#include <fstream>
+#include <cstdio>
 
 BinaryLogger& BinaryLogger::GetInstance()
 {
@@ -38,11 +43,8 @@ std::wstring BinaryLogger::GetLogFilePath() const
 
 
 
-std::wstring BinaryLogger::GeneratePacketFileName(const std::wstring& baseDirectory, UINT64 packetNumber)
+std::wstring BinaryLogger::GeneratePacketFileName(const std::wstring& baseDirectory, const SYSTEMTIME& timestamp, UINT64 packetNumber)
 {
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    
     std::wostringstream oss;
     oss << baseDirectory;
     
@@ -52,16 +54,18 @@ std::wstring BinaryLogger::GeneratePacketFileName(const std::wstring& baseDirect
         oss << L"\\";
     }
     
-    // ファイル名: packet_YYYYMMDD_HHMMSS_連番.bin
+    // ファイル名: packet_YYYYMMDD_HHMMSS.fff_連番.bin
     oss << L"packet_"
         << std::setfill(L'0')
-        << std::setw(4) << st.wYear
-        << std::setw(2) << st.wMonth
-        << std::setw(2) << st.wDay
+        << std::setw(4) << timestamp.wYear
+        << std::setw(2) << timestamp.wMonth
+        << std::setw(2) << timestamp.wDay
         << L"_"
-        << std::setw(2) << st.wHour
-        << std::setw(2) << st.wMinute
-        << std::setw(2) << st.wSecond
+        << std::setw(2) << timestamp.wHour
+        << std::setw(2) << timestamp.wMinute
+        << std::setw(2) << timestamp.wSecond
+        << L"."
+        << std::setw(3) << timestamp.wMilliseconds
         << L"_"
         << std::setw(6) << packetNumber
         << L".bin";
@@ -128,7 +132,7 @@ void BinaryLogger::LogPacket(const PacketInfo& packet)
     std::lock_guard<std::mutex> lock(m_mutex);
     
     // パケットごとに一意のファイル名を生成
-    std::wstring packetFilePath = GeneratePacketFileName(m_baseDirectory, m_packetCounter);
+    std::wstring packetFilePath = GeneratePacketFileName(m_baseDirectory, packet.timestamp, m_packetCounter);
     
     // ファイルを開く
     std::ofstream logFile(packetFilePath, std::ios::binary | std::ios::out | std::ios::trunc);

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <mutex>
 #include "PacketInfo.h"
+#include <Windows.h>
 
 // バイナリログのパケットエントリヘッダー
 #pragma pack(push, 1)
@@ -45,8 +46,9 @@ private:
     BinaryLogger(const BinaryLogger&) = delete;
     BinaryLogger& operator=(const BinaryLogger&) = delete;
     
-    std::wstring GeneratePacketFileName(const std::wstring& baseDirectory, UINT64 packetNumber);
+    std::wstring GeneratePacketFileName(const std::wstring& baseDirectory, const SYSTEMTIME& timestamp, UINT64 packetNumber);
     UINT32 IPStringToUInt32(const std::string& ipStr);
+
     UINT64 SystemTimeToFileTime(const SYSTEMTIME& st);
     
     bool m_isLogging;

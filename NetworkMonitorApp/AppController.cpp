@@ -12,6 +12,8 @@
 #include <mutex>
 #include <iomanip>
 #include <shellapi.h>
+#include <chrono>
+
 #pragma comment(lib, "Shlwapi.lib")
 
 AppController& AppController::GetInstance()
@@ -271,7 +273,7 @@ bool AppController::IsTextLogging() const
     return m_isTextLogging;
 }
 
-void AppController::WriteTextLog(const std::wstring& logText)
+void AppController::WriteTextLog(const SYSTEMTIME& timestamp, const std::wstring& logText)
 {
     std::lock_guard<std::mutex> lock(m_textLogMutex);
     
@@ -279,15 +281,12 @@ void AppController::WriteTextLog(const std::wstring& logText)
     {
         std::wofstream logFile(m_textLogFilePath, std::ios::out | std::ios::app);
         if (logFile.is_open())
-        {
-            SYSTEMTIME st;
-            GetLocalTime(&st);
-            
+        {          
             logFile << L"[" 
-                    << std::setfill(L'0') << std::setw(2) << st.wHour << L":"
-                    << std::setw(2) << st.wMinute << L":"
-                    << std::setw(2) << st.wSecond << L"."
-                    << std::setw(3) << st.wMilliseconds << L"] "
+                    << std::setfill(L'0') << std::setw(2) << timestamp.wHour << L":"
+                    << std::setw(2) << timestamp.wMinute << L":"
+                    << std::setw(2) << timestamp.wSecond << L"."
+                    << std::setw(3) << timestamp.wMilliseconds << L"] "
                     << logText << std::endl;
             logFile.close();
         }
@@ -462,10 +461,10 @@ void AppController::OnPacketCaptured(const PacketInfo& packet)
     
     if (IsTextLogging())
     {
-        WriteTextLog(logText);
+        WriteTextLog(packet.timestamp, logText);
     }
     
-    LogWindow::GetInstance().AddLogThreadSafe(logText);
+    LogWindow::GetInstance().AddLogThreadSafe(packet.timestamp, logText);
     
     if (m_hMainDlg)
     {
